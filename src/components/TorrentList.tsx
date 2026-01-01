@@ -8,7 +8,7 @@ import { TorrentDetailsPanel } from './TorrentDetailsPanel'
 
 const DEFAULT_PANEL_HEIGHT = 220
 
-type SortKey = 'name' | 'size' | 'progress' | 'downloaded' | 'uploaded' | 'dlspeed' | 'upspeed' | 'ratio'
+type SortKey = 'name' | 'size' | 'progress' | 'downloaded' | 'uploaded' | 'dlspeed' | 'upspeed' | 'ratio' | 'added_on'
 
 function SortIcon({ active, asc }: { active: boolean; asc: boolean }) {
 	return (
@@ -315,6 +315,16 @@ export function TorrentList() {
 									>
 										Ratio
 										<SortIcon active={sortKey === 'ratio'} asc={sortAsc} />
+									</button>
+								</th>
+								<th className="px-3 py-2.5 text-left whitespace-nowrap">
+									<button
+										onClick={() => handleSort('added_on')}
+										className="flex items-center gap-2 text-[9px] font-medium uppercase tracking-widest transition-colors"
+										style={{ color: 'var(--text-muted)' }}
+									>
+										Added
+										<SortIcon active={sortKey === 'added_on'} asc={sortAsc} />
 									</button>
 								</th>
 							</tr>

@@ -1,5 +1,5 @@
 import type { Torrent, TorrentState } from '../types/qbittorrent'
-import { formatSpeed, formatSize, formatEta } from '../utils/format'
+import { formatSpeed, formatSize, formatEta, formatDate } from '../utils/format'
 
 type StateType = 'accent' | 'warning' | 'muted' | 'info' | 'error'
 
@@ -137,6 +137,11 @@ export function TorrentRow({ torrent, selected, onSelect }: Props) {
 			<td className="px-3 py-3">
 				<span className="text-xs font-mono" style={{ color: 'var(--text-muted)' }}>
 					{torrent.ratio.toFixed(2)}
+				</span>
+			</td>
+			<td className="px-3 py-3">
+				<span className="text-xs font-mono" style={{ color: 'var(--text-muted)' }}>
+					{formatDate(torrent.added_on)}
 				</span>
 			</td>
 		</tr>
