@@ -11,8 +11,9 @@ type Tab = 'link' | 'file'
 export function AddTorrentModal({ open, onClose }: Props) {
 	const [tab, setTab] = useState<Tab>('link')
 	const [url, setUrl] = useState('')
-	const [file, setFile] = useState<File | null>(null)
+	const [files, setFiles] = useState<File[]>([])
 	const [category, setCategory] = useState('')
+	const [tags, setTags] = useState('')
 	const [savepath, setSavepath] = useState('')
 	const [startTorrent, setStartTorrent] = useState(true)
 	const [sequential, setSequential] = useState(false)
@@ -26,22 +27,24 @@ export function AddTorrentModal({ open, onClose }: Props) {
 	function handleSubmit(e: React.FormEvent) {
 		e.preventDefault()
 		if (tab === 'link' && !url.trim()) return
-		if (tab === 'file' && !file) return
+		if (tab === 'file' && files.length === 0) return
 
 		addMutation.mutate({
 			options: {
 				urls: tab === 'link' ? url.trim() : undefined,
 				category: category || undefined,
+				tags: tags || undefined,
 				savepath: savepath || undefined,
 				paused: !startTorrent,
 				sequentialDownload: sequential,
 			},
-			file: tab === 'file' ? file ?? undefined : undefined,
+			files: tab === 'file' ? files : undefined,
 		}, {
 			onSuccess: () => {
 				setUrl('')
-				setFile(null)
+				setFiles([])
 				setCategory('')
+				setTags('')
 				setSavepath('')
 				setStartTorrent(true)
 				setSequential(false)
@@ -51,17 +54,21 @@ export function AddTorrentModal({ open, onClose }: Props) {
 	}
 
 	function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-		const f = e.target.files?.[0]
-		if (f) setFile(f)
+		const selected = Array.from(e.target.files || []).filter(f => f.name.endsWith('.torrent'))
+		if (selected.length > 0) setFiles(prev => [...prev, ...selected])
 	}
 
 	function handleDrop(e: React.DragEvent) {
 		e.preventDefault()
-		const f = e.dataTransfer.files?.[0]
-		if (f && f.name.endsWith('.torrent')) {
-			setFile(f)
+		const dropped = Array.from(e.dataTransfer.files).filter(f => f.name.endsWith('.torrent'))
+		if (dropped.length > 0) {
+			setFiles(prev => [...prev, ...dropped])
 			setTab('file')
 		}
+	}
+
+	function removeFile(index: number) {
+		setFiles(prev => prev.filter((_, i) => i !== index))
 	}
 
 	return (
@@ -125,36 +132,45 @@ export function AddTorrentModal({ open, onClose }: Props) {
 							</div>
 						) : (
 							<div>
-								<label className="block text-xs font-medium mb-2" style={{ color: 'var(--text-muted)' }}>Torrent file</label>
+								<label className="block text-xs font-medium mb-2" style={{ color: 'var(--text-muted)' }}>Torrent files</label>
 								<input
 									ref={fileInputRef}
 									type="file"
 									accept=".torrent"
+									multiple
 									onChange={handleFileChange}
 									className="hidden"
 								/>
 								<button
 									type="button"
 									onClick={() => fileInputRef.current?.click()}
-									className="w-full py-6 px-4 rounded-xl border border-dashed text-sm transition-colors hover:opacity-80"
+									className="w-full py-4 px-4 rounded-xl border border-dashed text-sm transition-colors hover:opacity-80"
 									style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border)' }}
 								>
-									{file ? (
-										<div className="flex items-center justify-center gap-2" style={{ color: 'var(--text-primary)' }}>
-											<svg className="w-5 h-5" style={{ color: 'var(--accent)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-												<path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-											</svg>
-											<span className="truncate max-w-[200px]">{file.name}</span>
-										</div>
-									) : (
-										<div className="flex flex-col items-center gap-2" style={{ color: 'var(--text-muted)' }}>
-											<svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-												<path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
-											</svg>
-											<span>Click or drop .torrent file</span>
-										</div>
-									)}
+									<div className="flex flex-col items-center gap-2" style={{ color: 'var(--text-muted)' }}>
+										<svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+											<path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+										</svg>
+										<span>Click or drop .torrent files</span>
+									</div>
 								</button>
+								{files.length > 0 && (
+									<div className="mt-2 space-y-1 max-h-24 overflow-y-auto">
+										{files.map((f, i) => (
+											<div key={i} className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs" style={{ backgroundColor: 'var(--bg-secondary)' }}>
+												<svg className="w-4 h-4 shrink-0" style={{ color: 'var(--accent)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+													<path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+												</svg>
+												<span className="truncate flex-1" style={{ color: 'var(--text-primary)' }}>{f.name}</span>
+												<button type="button" onClick={() => removeFile(i)} className="p-0.5 rounded hover:opacity-70" style={{ color: 'var(--text-muted)' }}>
+													<svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+														<path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+													</svg>
+												</button>
+											</div>
+										))}
+									</div>
+								)}
 							</div>
 						)}
 
@@ -174,16 +190,28 @@ export function AddTorrentModal({ open, onClose }: Props) {
 								</select>
 							</div>
 							<div>
-								<label className="block text-xs font-medium mb-2" style={{ color: 'var(--text-muted)' }}>Save path</label>
+								<label className="block text-xs font-medium mb-2" style={{ color: 'var(--text-muted)' }}>Tags</label>
 								<input
 									type="text"
-									value={savepath}
-									onChange={(e) => setSavepath(e.target.value)}
-									placeholder="Default"
+									value={tags}
+									onChange={(e) => setTags(e.target.value)}
+									placeholder="tag1, tag2"
 									className="w-full px-3 py-2.5 rounded-xl border text-sm focus:outline-none transition-colors"
 									style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border)', color: 'var(--text-primary)' }}
 								/>
 							</div>
+						</div>
+
+						<div>
+							<label className="block text-xs font-medium mb-2" style={{ color: 'var(--text-muted)' }}>Save path</label>
+							<input
+								type="text"
+								value={savepath}
+								onChange={(e) => setSavepath(e.target.value)}
+								placeholder="Default"
+								className="w-full px-3 py-2.5 rounded-xl border text-sm focus:outline-none transition-colors"
+								style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border)', color: 'var(--text-primary)' }}
+							/>
 						</div>
 
 						<div className="flex items-center gap-4 pt-2">
@@ -244,7 +272,7 @@ export function AddTorrentModal({ open, onClose }: Props) {
 							</button>
 							<button
 								type="submit"
-								disabled={addMutation.isPending || (tab === 'link' && !url.trim()) || (tab === 'file' && !file)}
+								disabled={addMutation.isPending || (tab === 'link' && !url.trim()) || (tab === 'file' && files.length === 0)}
 								className="flex-1 py-3 rounded-xl text-sm font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
 								style={{ backgroundColor: 'var(--accent)', color: 'var(--accent-contrast)' }}
 							>

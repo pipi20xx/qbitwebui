@@ -1,8 +1,12 @@
 import { useTransferInfo } from '../hooks/useTransferInfo'
-import { formatSpeed } from '../utils/format'
+import { useTorrents } from '../hooks/useTorrents'
+import { formatSpeed, formatSize } from '../utils/format'
 
 export function StatusBar() {
 	const { data } = useTransferInfo()
+	const { data: torrents = [] } = useTorrents()
+	const totalDownloaded = torrents.reduce((sum, t) => sum + t.downloaded, 0)
+	const totalUploaded = torrents.reduce((sum, t) => sum + t.uploaded, 0)
 
 	const statusConfig = {
 		connected: { label: 'Connected', type: 'success' as const },
@@ -17,10 +21,10 @@ export function StatusBar() {
 	}
 
 	return (
-		<div className="relative flex items-center justify-between px-6 py-3 backdrop-blur-md border-t" style={{ backgroundColor: 'color-mix(in srgb, var(--bg-secondary) 80%, transparent)', borderColor: 'var(--border)' }}>
+		<div className="relative flex items-center px-6 py-3 backdrop-blur-md border-t" style={{ backgroundColor: 'color-mix(in srgb, var(--bg-secondary) 80%, transparent)', borderColor: 'var(--border)' }}>
 			<div className="absolute inset-0" style={{ background: 'linear-gradient(to right, transparent, color-mix(in srgb, var(--accent) 1%, transparent), transparent)' }} />
 
-			<div className="relative flex items-center gap-6">
+			<div className="relative flex-1 flex items-center gap-6">
 				<div className="flex items-center gap-2.5">
 					<div className="w-2 h-2 rounded-full shadow-lg" style={{ backgroundColor: statusColors[statusConfig.type], boxShadow: `0 0 10px ${statusColors[statusConfig.type]}50` }} />
 					<span className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>{statusConfig.label}</span>
@@ -48,7 +52,16 @@ export function StatusBar() {
 				</div>
 			</div>
 
-			<div className="relative flex items-center gap-4">
+			<div className="relative flex items-center justify-center">
+				<div className="flex items-center gap-2 px-3 py-1.5 rounded-lg border" style={{ backgroundColor: 'var(--bg-tertiary)', borderColor: 'var(--border)' }}>
+					<span className="text-[10px] font-medium uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Total</span>
+					<span className="text-xs font-mono" style={{ color: 'var(--accent)' }}>{formatSize(totalDownloaded)}</span>
+					<span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>/</span>
+					<span className="text-xs font-mono" style={{ color: 'var(--warning)' }}>{formatSize(totalUploaded)}</span>
+				</div>
+			</div>
+
+			<div className="relative flex-1 flex items-center justify-end gap-4">
 				<div className="flex items-center gap-2 px-3 py-1.5 rounded-lg border" style={{ backgroundColor: 'var(--bg-tertiary)', borderColor: 'var(--border)' }}>
 					<span className="text-[10px] font-medium uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>DHT</span>
 					<span className="text-xs font-mono font-medium" style={{ color: 'var(--text-secondary)' }}>{data?.dht_nodes ?? 0}</span>

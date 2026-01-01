@@ -90,16 +90,17 @@ export interface AddTorrentOptions {
 	urls?: string
 	savepath?: string
 	category?: string
+	tags?: string
 	paused?: boolean
 	sequentialDownload?: boolean
 	firstLastPiecePrio?: boolean
 	autoTMM?: boolean
 }
 
-export async function addTorrent(options: AddTorrentOptions, file?: File): Promise<void> {
+export async function addTorrent(options: AddTorrentOptions, files?: File[]): Promise<void> {
 	const formData = new FormData()
-	if (file) {
-		formData.append('torrents', file)
+	if (files) {
+		files.forEach(file => formData.append('torrents', file))
 	}
 	if (options.urls) {
 		formData.append('urls', options.urls)
@@ -109,6 +110,9 @@ export async function addTorrent(options: AddTorrentOptions, file?: File): Promi
 	}
 	if (options.category) {
 		formData.append('category', options.category)
+	}
+	if (options.tags) {
+		formData.append('tags', options.tags)
 	}
 	if (options.paused !== undefined) {
 		formData.append('paused', options.paused.toString())
@@ -159,4 +163,98 @@ export async function getTorrentFiles(hash: string): Promise<TorrentFile[]> {
 
 export async function getTorrentWebSeeds(hash: string): Promise<WebSeed[]> {
 	return request<WebSeed[]>(`/torrents/webseeds?hash=${hash}`)
+}
+
+export async function setCategory(hashes: string[], category: string): Promise<void> {
+	await request('/torrents/setCategory', {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+		body: new URLSearchParams({ hashes: hashes.join('|'), category }),
+	})
+}
+
+export async function addTags(hashes: string[], tags: string): Promise<void> {
+	await request('/torrents/addTags', {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+		body: new URLSearchParams({ hashes: hashes.join('|'), tags }),
+	})
+}
+
+export async function removeTags(hashes: string[], tags: string): Promise<void> {
+	await request('/torrents/removeTags', {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+		body: new URLSearchParams({ hashes: hashes.join('|'), tags }),
+	})
+}
+
+export async function getTags(): Promise<string[]> {
+	return request<string[]>('/torrents/tags')
+}
+
+export async function createTags(tags: string): Promise<void> {
+	await request('/torrents/createTags', {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+		body: new URLSearchParams({ tags }),
+	})
+}
+
+export async function deleteTags(tags: string): Promise<void> {
+	await request('/torrents/deleteTags', {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+		body: new URLSearchParams({ tags }),
+	})
+}
+
+export async function createCategory(category: string, savePath?: string): Promise<void> {
+	const params: Record<string, string> = { category }
+	if (savePath) params.savePath = savePath
+	await request('/torrents/createCategory', {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+		body: new URLSearchParams(params),
+	})
+}
+
+export async function removeCategories(categories: string[]): Promise<void> {
+	await request('/torrents/removeCategories', {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+		body: new URLSearchParams({ categories: categories.join('\n') }),
+	})
+}
+
+export async function setFilePriority(hash: string, ids: number[], priority: number): Promise<void> {
+	await request('/torrents/filePrio', {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+		body: new URLSearchParams({ hash, id: ids.join('|'), priority: priority.toString() }),
+	})
+}
+
+export async function renameTorrent(hash: string, name: string): Promise<void> {
+	await request('/torrents/rename', {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+		body: new URLSearchParams({ hash, name }),
+	})
+}
+
+export async function addTrackers(hash: string, urls: string[]): Promise<void> {
+	await request('/torrents/addTrackers', {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+		body: new URLSearchParams({ hash, urls: urls.join('\n') }),
+	})
+}
+
+export async function removeTrackers(hash: string, urls: string[]): Promise<void> {
+	await request('/torrents/removeTrackers', {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+		body: new URLSearchParams({ hash, urls: urls.join('|') }),
+	})
 }

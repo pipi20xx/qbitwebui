@@ -1,10 +1,11 @@
 import { useState, useMemo, useEffect } from 'react'
-import type { TorrentFilter } from '../types/qbittorrent'
-import { useTorrents, useStopTorrents, useStartTorrents, useDeleteTorrents, useCategories } from '../hooks/useTorrents'
+import type { TorrentFilter, Torrent } from '../types/qbittorrent'
+import { useTorrents, useStopTorrents, useStartTorrents, useDeleteTorrents, useCategories, useTags, useCreateCategory, useDeleteCategory, useCreateTag, useDeleteTag } from '../hooks/useTorrents'
 import { TorrentRow } from './TorrentRow'
-import { FilterBar, SearchInput, CategoryDropdown, TrackerDropdown } from './FilterBar'
+import { FilterBar, SearchInput, CategoryDropdown, TagDropdown, TrackerDropdown } from './FilterBar'
 import { AddTorrentModal } from './AddTorrentModal'
 import { TorrentDetailsPanel } from './TorrentDetailsPanel'
+import { ContextMenu } from './ContextMenu'
 
 const DEFAULT_PANEL_HEIGHT = 220
 
@@ -53,6 +54,7 @@ function ActionButton({
 export function TorrentList() {
 	const [filter, setFilter] = useState<TorrentFilter>('all')
 	const [categoryFilter, setCategoryFilter] = useState<string | null>(null)
+	const [tagFilter, setTagFilter] = useState<string | null>(null)
 	const [trackerFilter, setTrackerFilter] = useState<string | null>(null)
 	const [search, setSearch] = useState('')
 	const [selected, setSelected] = useState<Set<string>>(new Set())
@@ -65,8 +67,10 @@ export function TorrentList() {
 		const stored = localStorage.getItem('detailsPanelHeight')
 		return stored ? parseInt(stored, 10) : DEFAULT_PANEL_HEIGHT
 	})
+	const [contextMenu, setContextMenu] = useState<{ x: number; y: number; torrents: Torrent[] } | null>(null)
 
 	const { data: categories = {} } = useCategories()
+	const { data: tags = [] } = useTags()
 	const { data: torrents = [], isLoading } = useTorrents({
 		filter,
 		category: categoryFilter ?? undefined,
@@ -80,9 +84,16 @@ export function TorrentList() {
 	const stopMutation = useStopTorrents()
 	const startMutation = useStartTorrents()
 	const deleteMutation = useDeleteTorrents()
+	const createCategoryMutation = useCreateCategory()
+	const deleteCategoryMutation = useDeleteCategory()
+	const createTagMutation = useCreateTag()
+	const deleteTagMutation = useDeleteTag()
 
 	const filtered = useMemo(() => {
 		let result = torrents
+		if (tagFilter) {
+			result = result.filter((t) => t.tags.split(',').map(tag => tag.trim()).includes(tagFilter))
+		}
 		if (trackerFilter) {
 			result = result.filter((t) => t.tracker === trackerFilter)
 		}
@@ -96,7 +107,7 @@ export function TorrentList() {
 			return mul * (a[sortKey] - b[sortKey])
 		})
 		return result
-	}, [torrents, trackerFilter, search, sortKey, sortAsc])
+	}, [torrents, tagFilter, trackerFilter, search, sortKey, sortAsc])
 
 	function handleSelect(hash: string, multi: boolean) {
 		setSelected((prev) => {
@@ -159,6 +170,17 @@ export function TorrentList() {
 		setDeleteModal(false)
 	}
 
+	function handleContextMenu(e: React.MouseEvent, torrent: Torrent) {
+		e.preventDefault()
+		const contextTorrents = selected.has(torrent.hash)
+			? torrents.filter(t => selected.has(t.hash))
+			: [torrent]
+		if (!selected.has(torrent.hash)) {
+			setSelected(new Set([torrent.hash]))
+		}
+		setContextMenu({ x: e.clientX, y: e.clientY, torrents: contextTorrents })
+	}
+
 	const hasSelection = selected.size > 0
 	const selectedHash = selected.size === 1 ? [...selected][0] : null
 	const selectedTorrent = selectedHash ? torrents.find((t) => t.hash === selectedHash) : null
@@ -205,7 +227,21 @@ export function TorrentList() {
 				</div>
 
 				<div className="flex items-center gap-0.5 p-1 rounded-lg border" style={{ backgroundColor: 'var(--bg-tertiary)', borderColor: 'var(--border)' }}>
-					<CategoryDropdown value={categoryFilter} onChange={setCategoryFilter} categories={categories} />
+					<CategoryDropdown
+						value={categoryFilter}
+						onChange={setCategoryFilter}
+						categories={categories}
+						onCreate={(name) => createCategoryMutation.mutate({ name })}
+						onDelete={(name) => deleteCategoryMutation.mutate(name)}
+					/>
+					<div className="w-px h-5" style={{ backgroundColor: 'var(--border)' }} />
+					<TagDropdown
+						value={tagFilter}
+						onChange={setTagFilter}
+						tags={tags}
+						onCreate={(name) => createTagMutation.mutate(name)}
+						onDelete={(name) => deleteTagMutation.mutate(name)}
+					/>
 					<div className="w-px h-5" style={{ backgroundColor: 'var(--border)' }} />
 					<TrackerDropdown value={trackerFilter} onChange={setTrackerFilter} trackers={uniqueTrackers} />
 				</div>
@@ -336,6 +372,7 @@ export function TorrentList() {
 									torrent={t}
 									selected={selected.has(t.hash)}
 									onSelect={handleSelect}
+									onContextMenu={(e) => handleContextMenu(e, t)}
 								/>
 							))}
 						</tbody>
@@ -397,6 +434,15 @@ export function TorrentList() {
 				height={panelHeight}
 				onHeightChange={setPanelHeight}
 			/>
+
+			{contextMenu && (
+				<ContextMenu
+					x={contextMenu.x}
+					y={contextMenu.y}
+					torrents={contextMenu.torrents}
+					onClose={() => setContextMenu(null)}
+				/>
+			)}
 		</div>
 	)
 }

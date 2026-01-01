@@ -38,6 +38,7 @@ export interface Torrent {
 	tags: string
 	added_on: number
 	completion_on: number
+	last_activity: number
 	save_path: string
 	downloaded: number
 	uploaded: number

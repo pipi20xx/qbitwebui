@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import * as api from '../api/qbittorrent'
 
 export function useTorrentProperties(hash: string | null) {
@@ -41,5 +41,32 @@ export function useTorrentWebSeeds(hash: string | null) {
 		queryKey: ['torrent-webseeds', hash],
 		queryFn: () => api.getTorrentWebSeeds(hash!),
 		enabled: !!hash,
+	})
+}
+
+export function useSetFilePriority() {
+	const queryClient = useQueryClient()
+	return useMutation({
+		mutationFn: ({ hash, ids, priority }: { hash: string; ids: number[]; priority: number }) =>
+			api.setFilePriority(hash, ids, priority),
+		onSuccess: (_, { hash }) => queryClient.invalidateQueries({ queryKey: ['torrent-files', hash] }),
+	})
+}
+
+export function useAddTrackers() {
+	const queryClient = useQueryClient()
+	return useMutation({
+		mutationFn: ({ hash, urls }: { hash: string; urls: string[] }) =>
+			api.addTrackers(hash, urls),
+		onSuccess: (_, { hash }) => queryClient.invalidateQueries({ queryKey: ['torrent-trackers', hash] }),
+	})
+}
+
+export function useRemoveTrackers() {
+	const queryClient = useQueryClient()
+	return useMutation({
+		mutationFn: ({ hash, urls }: { hash: string; urls: string[] }) =>
+			api.removeTrackers(hash, urls),
+		onSuccess: (_, { hash }) => queryClient.invalidateQueries({ queryKey: ['torrent-trackers', hash] }),
 	})
 }

@@ -162,18 +162,242 @@ interface CategoryDropdownProps {
 	value: string | null
 	onChange: (v: string | null) => void
 	categories: Record<string, Category>
+	onCreate?: (name: string) => void
+	onDelete?: (name: string) => void
 }
 
-export function CategoryDropdown({ value, onChange, categories }: CategoryDropdownProps) {
-	const options = Object.keys(categories).map((name) => ({ value: name, label: name }))
+export function CategoryDropdown({ value, onChange, categories, onCreate, onDelete }: CategoryDropdownProps) {
+	const [open, setOpen] = useState(false)
+	const [creating, setCreating] = useState(false)
+	const [newName, setNewName] = useState('')
+	const ref = useRef<HTMLDivElement>(null)
+
+	useEffect(() => {
+		function handleClickOutside(e: MouseEvent) {
+			if (ref.current && !ref.current.contains(e.target as Node)) {
+				setOpen(false)
+				setCreating(false)
+				setNewName('')
+			}
+		}
+		document.addEventListener('mousedown', handleClickOutside)
+		return () => document.removeEventListener('mousedown', handleClickOutside)
+	}, [])
+
+	function handleCreate() {
+		if (newName.trim() && onCreate) {
+			onCreate(newName.trim())
+			setNewName('')
+			setCreating(false)
+		}
+	}
+
+	const names = Object.keys(categories)
+	const selected = names.find((n) => n === value)
+
 	return (
-		<Dropdown
-			value={value}
-			onChange={onChange}
-			options={options}
-			placeholder="Category"
-			icon={<path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12.75V12A2.25 2.25 0 0 1 4.5 9.75h15A2.25 2.25 0 0 1 21.75 12v.75m-8.69-6.44-2.12-2.12a1.5 1.5 0 0 0-1.061-.44H4.5A2.25 2.25 0 0 0 2.25 6v12a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9a2.25 2.25 0 0 0-2.25-2.25h-5.379a1.5 1.5 0 0 1-1.06-.44Z" />}
-		/>
+		<div ref={ref} className="relative">
+			<button
+				onClick={() => setOpen(!open)}
+				className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-all duration-200"
+				style={{
+					color: value ? 'var(--accent)' : 'var(--text-muted)',
+					backgroundColor: value ? 'color-mix(in srgb, var(--accent) 10%, transparent)' : 'transparent',
+				}}
+			>
+				<svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+					<path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12.75V12A2.25 2.25 0 0 1 4.5 9.75h15A2.25 2.25 0 0 1 21.75 12v.75m-8.69-6.44-2.12-2.12a1.5 1.5 0 0 0-1.061-.44H4.5A2.25 2.25 0 0 0 2.25 6v12a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9a2.25 2.25 0 0 0-2.25-2.25h-5.379a1.5 1.5 0 0 1-1.06-.44Z" />
+				</svg>
+				<span className="max-w-[100px] truncate">{selected ?? 'Category'}</span>
+				<svg className={`w-3 h-3 transition-transform ${open ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+					<path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+				</svg>
+			</button>
+			{open && (
+				<div className="absolute top-full left-0 mt-1 min-w-[180px] max-h-[300px] overflow-auto rounded-lg border shadow-xl z-[100]" style={{ backgroundColor: 'var(--bg-tertiary)', borderColor: 'var(--border)' }}>
+					<button
+						onClick={() => { onChange(null); setOpen(false) }}
+						className="w-full flex items-center px-3 py-2 text-xs text-left transition-colors"
+						style={{ color: !value ? 'var(--accent)' : 'var(--text-muted)', backgroundColor: !value ? 'color-mix(in srgb, var(--accent) 10%, transparent)' : 'transparent' }}
+					>
+						All
+					</button>
+					{names.map((name) => (
+						<div key={name} className="group flex items-center">
+							<button
+								onClick={() => { onChange(name); setOpen(false) }}
+								className="flex-1 px-3 py-2 text-xs text-left transition-colors truncate"
+								style={{ color: value === name ? 'var(--accent)' : 'var(--text-muted)', backgroundColor: value === name ? 'color-mix(in srgb, var(--accent) 10%, transparent)' : 'transparent' }}
+							>
+								{name}
+							</button>
+							{onDelete && (
+								<button
+									onClick={(e) => { e.stopPropagation(); onDelete(name); if (value === name) onChange(null) }}
+									className="opacity-0 group-hover:opacity-100 px-2 py-2 transition-opacity"
+									style={{ color: 'var(--error)' }}
+								>
+									<svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+										<path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+									</svg>
+								</button>
+							)}
+						</div>
+					))}
+					{onCreate && (
+						<div className="border-t" style={{ borderColor: 'var(--border)' }}>
+							{creating ? (
+								<div className="flex items-center gap-1 p-1.5">
+									<input
+										type="text"
+										value={newName}
+										onChange={(e) => setNewName(e.target.value)}
+										onKeyDown={(e) => { if (e.key === 'Enter') handleCreate(); if (e.key === 'Escape') { setCreating(false); setNewName('') } }}
+										placeholder="Name"
+										className="flex-1 px-2 py-1 rounded text-xs border"
+										style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border)', color: 'var(--text-primary)' }}
+										autoFocus
+									/>
+									<button onClick={handleCreate} className="p-1 rounded" style={{ color: 'var(--accent)' }}>
+										<svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+											<path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+										</svg>
+									</button>
+								</div>
+							) : (
+								<button onClick={() => setCreating(true)} className="w-full flex items-center gap-2 px-3 py-2 text-xs" style={{ color: 'var(--accent)' }}>
+									<svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+										<path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+									</svg>
+									New category
+								</button>
+							)}
+						</div>
+					)}
+				</div>
+			)}
+		</div>
+	)
+}
+
+interface TagDropdownProps {
+	value: string | null
+	onChange: (v: string | null) => void
+	tags: string[]
+	onCreate?: (name: string) => void
+	onDelete?: (name: string) => void
+}
+
+export function TagDropdown({ value, onChange, tags, onCreate, onDelete }: TagDropdownProps) {
+	const [open, setOpen] = useState(false)
+	const [creating, setCreating] = useState(false)
+	const [newName, setNewName] = useState('')
+	const ref = useRef<HTMLDivElement>(null)
+
+	useEffect(() => {
+		function handleClickOutside(e: MouseEvent) {
+			if (ref.current && !ref.current.contains(e.target as Node)) {
+				setOpen(false)
+				setCreating(false)
+				setNewName('')
+			}
+		}
+		document.addEventListener('mousedown', handleClickOutside)
+		return () => document.removeEventListener('mousedown', handleClickOutside)
+	}, [])
+
+	function handleCreate() {
+		if (newName.trim() && onCreate) {
+			onCreate(newName.trim())
+			setNewName('')
+			setCreating(false)
+		}
+	}
+
+	const selected = tags.find((t) => t === value)
+
+	return (
+		<div ref={ref} className="relative">
+			<button
+				onClick={() => setOpen(!open)}
+				className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-all duration-200"
+				style={{
+					color: value ? 'var(--accent)' : 'var(--text-muted)',
+					backgroundColor: value ? 'color-mix(in srgb, var(--accent) 10%, transparent)' : 'transparent',
+				}}
+			>
+				<svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+					<path strokeLinecap="round" strokeLinejoin="round" d="M9.568 3H5.25A2.25 2.25 0 0 0 3 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 0 0 5.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 0 0 9.568 3Z" />
+				</svg>
+				<span className="max-w-[100px] truncate">{selected ?? 'Tag'}</span>
+				<svg className={`w-3 h-3 transition-transform ${open ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+					<path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+				</svg>
+			</button>
+			{open && (
+				<div className="absolute top-full left-0 mt-1 min-w-[180px] max-h-[300px] overflow-auto rounded-lg border shadow-xl z-[100]" style={{ backgroundColor: 'var(--bg-tertiary)', borderColor: 'var(--border)' }}>
+					<button
+						onClick={() => { onChange(null); setOpen(false) }}
+						className="w-full flex items-center px-3 py-2 text-xs text-left transition-colors"
+						style={{ color: !value ? 'var(--accent)' : 'var(--text-muted)', backgroundColor: !value ? 'color-mix(in srgb, var(--accent) 10%, transparent)' : 'transparent' }}
+					>
+						All
+					</button>
+					{tags.map((tag) => (
+						<div key={tag} className="group flex items-center">
+							<button
+								onClick={() => { onChange(tag); setOpen(false) }}
+								className="flex-1 px-3 py-2 text-xs text-left transition-colors truncate"
+								style={{ color: value === tag ? 'var(--accent)' : 'var(--text-muted)', backgroundColor: value === tag ? 'color-mix(in srgb, var(--accent) 10%, transparent)' : 'transparent' }}
+							>
+								{tag}
+							</button>
+							{onDelete && (
+								<button
+									onClick={(e) => { e.stopPropagation(); onDelete(tag); if (value === tag) onChange(null) }}
+									className="opacity-0 group-hover:opacity-100 px-2 py-2 transition-opacity"
+									style={{ color: 'var(--error)' }}
+								>
+									<svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+										<path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+									</svg>
+								</button>
+							)}
+						</div>
+					))}
+					{onCreate && (
+						<div className="border-t" style={{ borderColor: 'var(--border)' }}>
+							{creating ? (
+								<div className="flex items-center gap-1 p-1.5">
+									<input
+										type="text"
+										value={newName}
+										onChange={(e) => setNewName(e.target.value)}
+										onKeyDown={(e) => { if (e.key === 'Enter') handleCreate(); if (e.key === 'Escape') { setCreating(false); setNewName('') } }}
+										placeholder="Name"
+										className="flex-1 px-2 py-1 rounded text-xs border"
+										style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border)', color: 'var(--text-primary)' }}
+										autoFocus
+									/>
+									<button onClick={handleCreate} className="p-1 rounded" style={{ color: 'var(--accent)' }}>
+										<svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+											<path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+										</svg>
+									</button>
+								</div>
+							) : (
+								<button onClick={() => setCreating(true)} className="w-full flex items-center gap-2 px-3 py-2 text-xs" style={{ color: 'var(--accent)' }}>
+									<svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+										<path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+									</svg>
+									New tag
+								</button>
+							)}
+						</div>
+					)}
+				</div>
+			)}
+		</div>
 	)
 }
 

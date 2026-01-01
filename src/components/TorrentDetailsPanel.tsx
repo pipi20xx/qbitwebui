@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { useTorrentProperties, useTorrentTrackers, useTorrentPeers, useTorrentFiles, useTorrentWebSeeds } from '../hooks/useTorrentDetails'
+import { useTorrentProperties, useTorrentTrackers, useTorrentPeers, useTorrentFiles, useTorrentWebSeeds, useSetFilePriority, useAddTrackers, useRemoveTrackers } from '../hooks/useTorrentDetails'
 import { formatSize, formatSpeed, formatDate, formatDuration, formatEta } from '../utils/format'
 import type { Tracker, Peer, TorrentFile } from '../types/torrentDetails'
 
@@ -99,47 +99,101 @@ function GeneralTab({ hash }: { hash: string }) {
 }
 
 function TrackersTab({ hash }: { hash: string }) {
+	const [adding, setAdding] = useState(false)
+	const [newUrl, setNewUrl] = useState('')
 	const { data: trackers, isLoading } = useTorrentTrackers(hash)
+	const addMutation = useAddTrackers()
+	const removeMutation = useRemoveTrackers()
+
+	function handleAdd() {
+		if (newUrl.trim()) {
+			addMutation.mutate({ hash, urls: newUrl.trim().split('\n').filter(Boolean) })
+			setNewUrl('')
+			setAdding(false)
+		}
+	}
+
+	function handleRemove(url: string) {
+		removeMutation.mutate({ hash, urls: [url] })
+	}
+
 	if (isLoading) return <LoadingSkeleton />
 	const filtered = trackers?.filter((t: Tracker) => !t.url.startsWith('** [')) ?? []
-	if (filtered.length === 0) return <EmptyState message="No trackers" />
+
 	return (
-		<div className="overflow-auto h-full">
-			<table className="w-full text-xs">
-				<thead className="sticky top-0 backdrop-blur-sm" style={{ backgroundColor: 'color-mix(in srgb, var(--bg-secondary) 95%, transparent)' }}>
-					<tr className="text-left border-b" style={{ color: 'var(--text-muted)', borderColor: 'var(--border)' }}>
-						<th className="px-3 py-2 font-medium text-[9px] uppercase tracking-widest">Tier</th>
-						<th className="px-3 py-2 font-medium text-[9px] uppercase tracking-widest">URL</th>
-						<th className="px-3 py-2 font-medium text-[9px] uppercase tracking-widest">Status</th>
-						<th className="px-3 py-2 font-medium text-[9px] uppercase tracking-widest text-right">Seeds</th>
-						<th className="px-3 py-2 font-medium text-[9px] uppercase tracking-widest text-right">Peers</th>
-						<th className="px-3 py-2 font-medium text-[9px] uppercase tracking-widest">Message</th>
-					</tr>
-				</thead>
-				<tbody>
-					{filtered.map((t: Tracker, i: number) => {
-						const status = getTrackerStatus(t.status)
-						return (
-							<tr key={i} className="border-t transition-colors" style={{ borderColor: 'var(--border)' }}>
-								<td className="px-3 py-1.5 font-mono" style={{ color: 'var(--text-muted)' }}>{t.tier}</td>
-								<td className="px-3 py-1.5 font-mono truncate max-w-[200px]" style={{ color: 'var(--text-primary)' }} title={t.url}>{t.url}</td>
-								<td className="px-3 py-1.5">
-									<span
-										className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-medium"
-										style={{ color: status.colorVar, backgroundColor: `color-mix(in srgb, ${status.colorVar} 10%, transparent)` }}
-									>
-										<span className="w-1 h-1 rounded-full" style={{ backgroundColor: status.colorVar }} />
-										{status.label}
-									</span>
-								</td>
-								<td className="px-3 py-1.5 text-right font-mono" style={{ color: 'var(--accent)' }}>{t.num_seeds}</td>
-								<td className="px-3 py-1.5 text-right font-mono" style={{ color: 'var(--text-muted)' }}>{t.num_peers}</td>
-								<td className="px-3 py-1.5 truncate max-w-[120px]" style={{ color: 'var(--text-muted)' }} title={t.msg}>{t.msg || '—'}</td>
+		<div className="flex flex-col h-full">
+			<div className="flex items-center gap-2 px-3 py-2 border-b" style={{ borderColor: 'var(--border)' }}>
+				{adding ? (
+					<div className="flex-1 flex items-center gap-2">
+						<input
+							type="text"
+							value={newUrl}
+							onChange={(e) => setNewUrl(e.target.value)}
+							placeholder="Tracker URL (one per line)"
+							className="flex-1 px-2 py-1 rounded text-xs border"
+							style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border)', color: 'var(--text-primary)' }}
+							autoFocus
+							onKeyDown={(e) => { if (e.key === 'Enter') handleAdd(); if (e.key === 'Escape') setAdding(false) }}
+						/>
+						<button onClick={handleAdd} className="px-2 py-1 rounded text-[10px] font-medium" style={{ backgroundColor: 'var(--accent)', color: 'var(--accent-contrast)' }}>Add</button>
+						<button onClick={() => setAdding(false)} className="px-2 py-1 rounded text-[10px] font-medium" style={{ color: 'var(--text-muted)' }}>Cancel</button>
+					</div>
+				) : (
+					<button onClick={() => setAdding(true)} className="flex items-center gap-1 px-2 py-1 rounded text-[10px] font-medium" style={{ color: 'var(--accent)' }}>
+						<svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+							<path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+						</svg>
+						Add Tracker
+					</button>
+				)}
+			</div>
+			{filtered.length === 0 ? (
+				<EmptyState message="No trackers" />
+			) : (
+				<div className="overflow-auto flex-1">
+					<table className="w-full text-xs">
+						<thead className="sticky top-0 backdrop-blur-sm" style={{ backgroundColor: 'color-mix(in srgb, var(--bg-secondary) 95%, transparent)' }}>
+							<tr className="text-left border-b" style={{ color: 'var(--text-muted)', borderColor: 'var(--border)' }}>
+								<th className="px-3 py-2 font-medium text-[9px] uppercase tracking-widest">Tier</th>
+								<th className="px-3 py-2 font-medium text-[9px] uppercase tracking-widest">URL</th>
+								<th className="px-3 py-2 font-medium text-[9px] uppercase tracking-widest">Status</th>
+								<th className="px-3 py-2 font-medium text-[9px] uppercase tracking-widest text-right">Seeds</th>
+								<th className="px-3 py-2 font-medium text-[9px] uppercase tracking-widest text-right">Peers</th>
+								<th className="px-3 py-2 font-medium text-[9px] uppercase tracking-widest"></th>
 							</tr>
-						)
-					})}
-				</tbody>
-			</table>
+						</thead>
+						<tbody>
+							{filtered.map((t: Tracker, i: number) => {
+								const status = getTrackerStatus(t.status)
+								return (
+									<tr key={i} className="border-t transition-colors group" style={{ borderColor: 'var(--border)' }}>
+										<td className="px-3 py-1.5 font-mono" style={{ color: 'var(--text-muted)' }}>{t.tier}</td>
+										<td className="px-3 py-1.5 font-mono truncate max-w-[200px]" style={{ color: 'var(--text-primary)' }} title={t.url}>{t.url}</td>
+										<td className="px-3 py-1.5">
+											<span
+												className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-medium"
+												style={{ color: status.colorVar, backgroundColor: `color-mix(in srgb, ${status.colorVar} 10%, transparent)` }}
+											>
+												<span className="w-1 h-1 rounded-full" style={{ backgroundColor: status.colorVar }} />
+												{status.label}
+											</span>
+										</td>
+										<td className="px-3 py-1.5 text-right font-mono" style={{ color: 'var(--accent)' }}>{t.num_seeds}</td>
+										<td className="px-3 py-1.5 text-right font-mono" style={{ color: 'var(--text-muted)' }}>{t.num_peers}</td>
+										<td className="px-3 py-1.5 text-right">
+											<button onClick={() => handleRemove(t.url)} className="opacity-0 group-hover:opacity-100 p-1 rounded transition-opacity" style={{ color: 'var(--error)' }} title="Remove tracker">
+												<svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+													<path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+												</svg>
+											</button>
+										</td>
+									</tr>
+								)
+							})}
+						</tbody>
+					</table>
+				</div>
+			)}
 		</div>
 	)
 }
@@ -207,8 +261,21 @@ function HttpSourcesTab({ hash }: { hash: string }) {
 	)
 }
 
+const PRIORITY_OPTIONS = [
+	{ value: 0, label: 'Skip', color: 'var(--text-muted)' },
+	{ value: 1, label: 'Normal', color: 'var(--text-primary)' },
+	{ value: 6, label: 'High', color: 'var(--warning)' },
+	{ value: 7, label: 'Max', color: 'var(--accent)' },
+]
+
 function ContentTab({ hash }: { hash: string }) {
 	const { data: files, isLoading } = useTorrentFiles(hash)
+	const setPriorityMutation = useSetFilePriority()
+
+	function handlePriorityChange(index: number, priority: number) {
+		setPriorityMutation.mutate({ hash, ids: [index], priority })
+	}
+
 	if (isLoading) return <LoadingSkeleton />
 	if (!files || files.length === 0) return <EmptyState message="No files" />
 	return (
@@ -219,13 +286,14 @@ function ContentTab({ hash }: { hash: string }) {
 						<th className="px-3 py-2 font-medium text-[9px] uppercase tracking-widest">Name</th>
 						<th className="px-3 py-2 font-medium text-[9px] uppercase tracking-widest text-right">Size</th>
 						<th className="px-3 py-2 font-medium text-[9px] uppercase tracking-widest text-right">Progress</th>
-						<th className="px-3 py-2 font-medium text-[9px] uppercase tracking-widest text-right">Pri</th>
+						<th className="px-3 py-2 font-medium text-[9px] uppercase tracking-widest text-right">Priority</th>
 					</tr>
 				</thead>
 				<tbody>
 					{files.map((f: TorrentFile, i: number) => {
 						const progress = f.progress * 100
 						const done = progress >= 100
+						const prioOption = PRIORITY_OPTIONS.find(p => p.value === f.priority) || PRIORITY_OPTIONS[1]
 						return (
 							<tr key={i} className="border-t transition-colors" style={{ borderColor: 'var(--border)' }}>
 								<td className="px-3 py-1.5">
@@ -235,11 +303,11 @@ function ContentTab({ hash }: { hash: string }) {
 												<path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
 											</svg>
 										) : (
-											<svg className="w-3 h-3 shrink-0" style={{ color: 'var(--text-muted)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+											<svg className="w-3 h-3 shrink-0" style={{ color: f.priority === 0 ? 'var(--error)' : 'var(--text-muted)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
 												<path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
 											</svg>
 										)}
-										<span className="truncate max-w-[280px]" style={{ color: 'var(--text-primary)' }} title={f.name}>{f.name}</span>
+										<span className="truncate max-w-[280px]" style={{ color: f.priority === 0 ? 'var(--text-muted)' : 'var(--text-primary)', textDecoration: f.priority === 0 ? 'line-through' : 'none' }} title={f.name}>{f.name}</span>
 									</div>
 								</td>
 								<td className="px-3 py-1.5 text-right font-mono" style={{ color: 'var(--text-muted)' }}>{formatSize(f.size)}</td>
@@ -251,7 +319,18 @@ function ContentTab({ hash }: { hash: string }) {
 										<span className="font-mono w-9 text-right" style={{ color: done ? 'var(--accent)' : 'var(--text-muted)' }}>{progress.toFixed(0)}%</span>
 									</div>
 								</td>
-								<td className="px-3 py-1.5 text-right font-mono" style={{ color: 'var(--text-muted)' }}>{f.priority}</td>
+								<td className="px-3 py-1.5 text-right">
+									<select
+										value={f.priority}
+										onChange={(e) => handlePriorityChange(i, parseInt(e.target.value))}
+										className="px-2 py-1 rounded text-[10px] font-medium border cursor-pointer"
+										style={{ backgroundColor: 'var(--bg-tertiary)', borderColor: 'var(--border)', color: prioOption.color }}
+									>
+										{PRIORITY_OPTIONS.map(p => (
+											<option key={p.value} value={p.value} style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-primary)' }}>{p.label}</option>
+										))}
+									</select>
+								</td>
 							</tr>
 						)
 					})}

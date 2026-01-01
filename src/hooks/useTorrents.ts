@@ -38,8 +38,8 @@ export function useDeleteTorrents() {
 export function useAddTorrent() {
 	const queryClient = useQueryClient()
 	return useMutation({
-		mutationFn: ({ options, file }: { options: AddTorrentOptions; file?: File }) =>
-			api.addTorrent(options, file),
+		mutationFn: ({ options, files }: { options: AddTorrentOptions; files?: File[] }) =>
+			api.addTorrent(options, files),
 		onSuccess: () => queryClient.invalidateQueries({ queryKey: ['torrents'] }),
 	})
 }
@@ -48,5 +48,93 @@ export function useCategories() {
 	return useQuery({
 		queryKey: ['categories'],
 		queryFn: api.getCategories,
+	})
+}
+
+export function useTags() {
+	return useQuery({
+		queryKey: ['tags'],
+		queryFn: api.getTags,
+	})
+}
+
+export function useSetCategory() {
+	const queryClient = useQueryClient()
+	return useMutation({
+		mutationFn: ({ hashes, category }: { hashes: string[]; category: string }) =>
+			api.setCategory(hashes, category),
+		onSuccess: () => queryClient.invalidateQueries({ queryKey: ['torrents'] }),
+	})
+}
+
+export function useAddTags() {
+	const queryClient = useQueryClient()
+	return useMutation({
+		mutationFn: ({ hashes, tags }: { hashes: string[]; tags: string }) =>
+			api.addTags(hashes, tags),
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ['torrents'] })
+			queryClient.invalidateQueries({ queryKey: ['tags'] })
+		},
+	})
+}
+
+export function useRemoveTags() {
+	const queryClient = useQueryClient()
+	return useMutation({
+		mutationFn: ({ hashes, tags }: { hashes: string[]; tags: string }) =>
+			api.removeTags(hashes, tags),
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ['torrents'] })
+			queryClient.invalidateQueries({ queryKey: ['tags'] })
+		},
+	})
+}
+
+export function useRenameTorrent() {
+	const queryClient = useQueryClient()
+	return useMutation({
+		mutationFn: ({ hash, name }: { hash: string; name: string }) =>
+			api.renameTorrent(hash, name),
+		onSuccess: () => queryClient.invalidateQueries({ queryKey: ['torrents'] }),
+	})
+}
+
+export function useCreateTag() {
+	const queryClient = useQueryClient()
+	return useMutation({
+		mutationFn: (tag: string) => api.createTags(tag),
+		onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tags'] }),
+	})
+}
+
+export function useDeleteTag() {
+	const queryClient = useQueryClient()
+	return useMutation({
+		mutationFn: (tag: string) => api.deleteTags(tag),
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ['tags'] })
+			queryClient.invalidateQueries({ queryKey: ['torrents'] })
+		},
+	})
+}
+
+export function useCreateCategory() {
+	const queryClient = useQueryClient()
+	return useMutation({
+		mutationFn: ({ name, savePath }: { name: string; savePath?: string }) =>
+			api.createCategory(name, savePath),
+		onSuccess: () => queryClient.invalidateQueries({ queryKey: ['categories'] }),
+	})
+}
+
+export function useDeleteCategory() {
+	const queryClient = useQueryClient()
+	return useMutation({
+		mutationFn: (name: string) => api.removeCategories([name]),
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ['categories'] })
+			queryClient.invalidateQueries({ queryKey: ['torrents'] })
+		},
 	})
 }

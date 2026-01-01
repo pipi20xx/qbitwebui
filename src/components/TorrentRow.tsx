@@ -1,5 +1,5 @@
 import type { Torrent, TorrentState } from '../types/qbittorrent'
-import { formatSpeed, formatSize, formatEta, formatDate } from '../utils/format'
+import { formatSpeed, formatSize, formatEta, formatDate, formatRelativeTime } from '../utils/format'
 
 type StateType = 'accent' | 'warning' | 'muted' | 'info' | 'error'
 
@@ -45,9 +45,10 @@ interface Props {
 	torrent: Torrent
 	selected: boolean
 	onSelect: (hash: string, multi: boolean) => void
+	onContextMenu: (e: React.MouseEvent) => void
 }
 
-export function TorrentRow({ torrent, selected, onSelect }: Props) {
+export function TorrentRow({ torrent, selected, onSelect, onContextMenu }: Props) {
 	const { label, type, isDownloading } = getStateInfo(torrent.state)
 	const progress = Math.round(torrent.progress * 100)
 	const isComplete = progress >= 100
@@ -56,6 +57,7 @@ export function TorrentRow({ torrent, selected, onSelect }: Props) {
 	return (
 		<tr
 			onClick={(e) => onSelect(torrent.hash, e.ctrlKey || e.metaKey)}
+			onContextMenu={onContextMenu}
 			className={`group cursor-pointer transition-colors duration-150 ${isDownloading ? 'downloading' : ''}`}
 			style={{
 				backgroundColor: selected ? 'color-mix(in srgb, var(--accent) 8%, transparent)' : 'transparent',
@@ -76,7 +78,7 @@ export function TorrentRow({ torrent, selected, onSelect }: Props) {
 							</svg>
 						)}
 					</div>
-					<span className="truncate font-medium text-sm" style={{ color: 'var(--text-secondary)' }} title={torrent.name}>
+					<span className="truncate font-medium text-sm" style={{ color: 'var(--text-secondary)' }} title={`${torrent.name}\nLast active: ${formatRelativeTime(torrent.last_activity)}`}>
 						{torrent.name}
 					</span>
 				</div>
