@@ -87,9 +87,6 @@ export function TorrentRow({ torrent, selected, onSelect, onContextMenu, ratioTh
 				</div>
 			</td>
 			<td className="px-3 py-3">
-				<span className="text-xs font-mono" style={{ color: 'var(--text-muted)' }}>{formatSize(torrent.size)}</span>
-			</td>
-			<td className="px-3 py-3">
 				{isComplete ? (
 					<div className="flex items-center gap-2">
 						<div className="w-5 h-5 rounded-full flex items-center justify-center" style={{ backgroundColor: 'color-mix(in srgb, var(--accent) 20%, transparent)' }}>

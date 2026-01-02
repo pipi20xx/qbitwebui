@@ -11,7 +11,7 @@ import { loadRatioThreshold, saveRatioThreshold } from '../utils/ratioThresholds
 
 const DEFAULT_PANEL_HEIGHT = 220
 
-type SortKey = 'name' | 'size' | 'progress' | 'downloaded' | 'uploaded' | 'dlspeed' | 'upspeed' | 'ratio' | 'seeding_time' | 'added_on'
+type SortKey = 'name' | 'progress' | 'downloaded' | 'uploaded' | 'dlspeed' | 'upspeed' | 'ratio' | 'seeding_time' | 'added_on'
 
 function SortIcon({ active, asc }: { active: boolean; asc: boolean }) {
 	return (
@@ -280,16 +280,6 @@ export function TorrentList() {
 									>
 										Name
 										<SortIcon active={sortKey === 'name'} asc={sortAsc} />
-									</button>
-								</th>
-								<th className="px-3 py-2.5 text-left whitespace-nowrap">
-									<button
-										onClick={() => handleSort('size')}
-										className="flex items-center gap-2 text-[9px] font-medium uppercase tracking-widest transition-colors"
-										style={{ color: 'var(--text-muted)' }}
-									>
-										Size
-										<SortIcon active={sortKey === 'size'} asc={sortAsc} />
 									</button>
 								</th>
 								<th className="px-3 py-2.5 text-left whitespace-nowrap">
