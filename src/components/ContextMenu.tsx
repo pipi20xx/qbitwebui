@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { useCategories, useTags, useStartTorrents, useStopTorrents, useDeleteTorrents, useSetCategory, useAddTags, useRemoveTags, useRenameTorrent } from '../hooks/useTorrents'
+import { exportTorrents } from '../api/qbittorrent'
 import type { Torrent } from '../types/qbittorrent'
 
 interface Props {
@@ -105,6 +106,11 @@ export function ContextMenu({ x, y, torrents, onClose }: Props) {
 		onClose()
 	}
 
+	function handleExport() {
+		exportTorrents(torrents.map(t => ({ hash: t.hash, name: t.name })))
+		onClose()
+	}
+
 	if (renaming && isSingle) {
 		return (
 			<div ref={ref} className="rounded-lg border shadow-xl z-[200] p-3" style={menuStyle}>
@@ -177,6 +183,7 @@ export function ContextMenu({ x, y, torrents, onClose }: Props) {
 				</>
 			)}
 			<div className="h-px my-1" style={{ backgroundColor: 'var(--border)' }} />
+			<MenuItem onClick={handleExport}>Export</MenuItem>
 			<MenuItem onClick={() => setSubmenu(submenu === 'delete' ? null : 'delete')} hasSubmenu>
 				Delete
 			</MenuItem>

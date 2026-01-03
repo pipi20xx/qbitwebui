@@ -170,6 +170,11 @@ export function TorrentList() {
 				setSelected(new Set())
 				return
 			}
+			if (e.key === 'a' && (e.ctrlKey || e.metaKey)) {
+				e.preventDefault()
+				setSelected(new Set(filtered.map(t => t.hash)))
+				return
+			}
 			if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
 				if (filtered.length === 0) return
 				e.preventDefault()

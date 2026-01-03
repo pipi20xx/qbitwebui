@@ -1,3 +1,4 @@
+import JSZip from 'jszip'
 import type { Torrent, TorrentFilter, TransferInfo } from '../types/qbittorrent'
 import type { TorrentProperties, Tracker, PeersResponse, TorrentFile, WebSeed } from '../types/torrentDetails'
 
@@ -257,4 +258,34 @@ export async function removeTrackers(hash: string, urls: string[]): Promise<void
 		headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
 		body: new URLSearchParams({ hash, urls: urls.join('|') }),
 	})
+}
+
+async function fetchTorrentBlob(hash: string): Promise<Blob> {
+	const res = await fetch(`${BASE}/torrents/export?hash=${hash}`, { credentials: 'include' })
+	if (!res.ok) throw new Error(`Export failed: ${res.status}`)
+	return res.blob()
+}
+
+function downloadBlob(blob: Blob, filename: string) {
+	const url = URL.createObjectURL(blob)
+	const a = document.createElement('a')
+	a.href = url
+	a.download = filename
+	a.click()
+	URL.revokeObjectURL(url)
+}
+
+export async function exportTorrents(torrents: { hash: string; name: string }[]): Promise<void> {
+	if (torrents.length === 1) {
+		const blob = await fetchTorrentBlob(torrents[0].hash)
+		downloadBlob(blob, `${torrents[0].name}.torrent`)
+		return
+	}
+	const zip = new JSZip()
+	for (const t of torrents) {
+		const blob = await fetchTorrentBlob(t.hash)
+		zip.file(`${t.name}.torrent`, blob)
+	}
+	const zipBlob = await zip.generateAsync({ type: 'blob' })
+	downloadBlob(zipBlob, 'torrents.zip')
 }
