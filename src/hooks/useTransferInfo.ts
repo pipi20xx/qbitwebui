@@ -1,10 +1,12 @@
 import { useQuery } from '@tanstack/react-query'
 import { getTransferInfo } from '../api/qbittorrent'
+import { useInstance } from './useInstance'
 
 export function useTransferInfo() {
+	const instance = useInstance()
 	return useQuery({
-		queryKey: ['transferInfo'],
-		queryFn: getTransferInfo,
+		queryKey: ['transferInfo', instance.id],
+		queryFn: () => getTransferInfo(instance.id),
 		refetchInterval: 2000,
 	})
 }

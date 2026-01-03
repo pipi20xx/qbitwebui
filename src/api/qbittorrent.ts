@@ -2,10 +2,12 @@ import JSZip from 'jszip'
 import type { Torrent, TorrentFilter, TransferInfo } from '../types/qbittorrent'
 import type { TorrentProperties, Tracker, PeersResponse, TorrentFile, WebSeed } from '../types/torrentDetails'
 
-const BASE = '/api/v2'
+function getBase(instanceId: number): string {
+	return `/api/instances/${instanceId}/qbt/v2`
+}
 
-async function request<T>(endpoint: string, options?: RequestInit): Promise<T> {
-	const res = await fetch(`${BASE}${endpoint}`, {
+async function request<T>(instanceId: number, endpoint: string, options?: RequestInit): Promise<T> {
+	const res = await fetch(`${getBase(instanceId)}${endpoint}`, {
 		...options,
 		credentials: 'include',
 	})
@@ -13,31 +15,13 @@ async function request<T>(endpoint: string, options?: RequestInit): Promise<T> {
 		throw new Error(`API error: ${res.status}`)
 	}
 	const text = await res.text()
-	if (!text) return {} as T
+	if (!text) {
+		throw new Error('Empty response from API')
+	}
 	try {
 		return JSON.parse(text)
 	} catch {
 		throw new Error(`Invalid JSON response: ${text.slice(0, 100)}`)
-	}
-}
-
-export async function login(username: string, password: string): Promise<boolean> {
-	const res = await fetch(`${BASE}/auth/login`, {
-		method: 'POST',
-		credentials: 'include',
-		headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-		body: new URLSearchParams({ username, password }),
-	})
-	const text = await res.text()
-	return text === 'Ok.'
-}
-
-export async function checkSession(): Promise<boolean> {
-	try {
-		const res = await fetch(`${BASE}/app/version`, { credentials: 'include' })
-		return res.ok
-	} catch {
-		return false
 	}
 }
 
@@ -47,37 +31,37 @@ export interface TorrentFilterOptions {
 	tag?: string
 }
 
-export async function getTorrents(options: TorrentFilterOptions = {}): Promise<Torrent[]> {
+export async function getTorrents(instanceId: number, options: TorrentFilterOptions = {}): Promise<Torrent[]> {
 	const params = new URLSearchParams()
 	if (options.filter && options.filter !== 'all') params.set('filter', options.filter)
 	if (options.category) params.set('category', options.category)
 	if (options.tag) params.set('tag', options.tag)
 	const query = params.toString()
-	return request<Torrent[]>(`/torrents/info${query ? `?${query}` : ''}`)
+	return request<Torrent[]>(instanceId, `/torrents/info${query ? `?${query}` : ''}`)
 }
 
-export async function getTransferInfo(): Promise<TransferInfo> {
-	return request<TransferInfo>('/transfer/info')
+export async function getTransferInfo(instanceId: number): Promise<TransferInfo> {
+	return request<TransferInfo>(instanceId, '/transfer/info')
 }
 
-export async function stopTorrents(hashes: string[]): Promise<void> {
-	await request('/torrents/stop', {
+export async function stopTorrents(instanceId: number, hashes: string[]): Promise<void> {
+	await request(instanceId, '/torrents/stop', {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
 		body: new URLSearchParams({ hashes: hashes.join('|') }),
 	})
 }
 
-export async function startTorrents(hashes: string[]): Promise<void> {
-	await request('/torrents/start', {
+export async function startTorrents(instanceId: number, hashes: string[]): Promise<void> {
+	await request(instanceId, '/torrents/start', {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
 		body: new URLSearchParams({ hashes: hashes.join('|') }),
 	})
 }
 
-export async function deleteTorrents(hashes: string[], deleteFiles = false): Promise<void> {
-	await request('/torrents/delete', {
+export async function deleteTorrents(instanceId: number, hashes: string[], deleteFiles = false): Promise<void> {
+	await request(instanceId, '/torrents/delete', {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
 		body: new URLSearchParams({
@@ -98,7 +82,7 @@ export interface AddTorrentOptions {
 	autoTMM?: boolean
 }
 
-export async function addTorrent(options: AddTorrentOptions, files?: File[]): Promise<void> {
+export async function addTorrent(instanceId: number, options: AddTorrentOptions, files?: File[]): Promise<void> {
 	const formData = new FormData()
 	if (files) {
 		files.forEach(file => formData.append('torrents', file))
@@ -127,7 +111,7 @@ export async function addTorrent(options: AddTorrentOptions, files?: File[]): Pr
 	if (options.autoTMM !== undefined) {
 		formData.append('autoTMM', options.autoTMM.toString())
 	}
-	const res = await fetch(`${BASE}/torrents/add`, {
+	const res = await fetch(`${getBase(instanceId)}/torrents/add`, {
 		method: 'POST',
 		credentials: 'include',
 		body: formData,
@@ -142,126 +126,126 @@ export interface Category {
 	savePath: string
 }
 
-export async function getCategories(): Promise<Record<string, Category>> {
-	return request<Record<string, Category>>('/torrents/categories')
+export async function getCategories(instanceId: number): Promise<Record<string, Category>> {
+	return request<Record<string, Category>>(instanceId, '/torrents/categories')
 }
 
-export async function getTorrentProperties(hash: string): Promise<TorrentProperties> {
-	return request<TorrentProperties>(`/torrents/properties?hash=${hash}`)
+export async function getTorrentProperties(instanceId: number, hash: string): Promise<TorrentProperties> {
+	return request<TorrentProperties>(instanceId, `/torrents/properties?hash=${hash}`)
 }
 
-export async function getTorrentTrackers(hash: string): Promise<Tracker[]> {
-	return request<Tracker[]>(`/torrents/trackers?hash=${hash}`)
+export async function getTorrentTrackers(instanceId: number, hash: string): Promise<Tracker[]> {
+	return request<Tracker[]>(instanceId, `/torrents/trackers?hash=${hash}`)
 }
 
-export async function getTorrentPeers(hash: string): Promise<PeersResponse> {
-	return request<PeersResponse>(`/sync/torrentPeers?hash=${hash}`)
+export async function getTorrentPeers(instanceId: number, hash: string): Promise<PeersResponse> {
+	return request<PeersResponse>(instanceId, `/sync/torrentPeers?hash=${hash}`)
 }
 
-export async function getTorrentFiles(hash: string): Promise<TorrentFile[]> {
-	return request<TorrentFile[]>(`/torrents/files?hash=${hash}`)
+export async function getTorrentFiles(instanceId: number, hash: string): Promise<TorrentFile[]> {
+	return request<TorrentFile[]>(instanceId, `/torrents/files?hash=${hash}`)
 }
 
-export async function getTorrentWebSeeds(hash: string): Promise<WebSeed[]> {
-	return request<WebSeed[]>(`/torrents/webseeds?hash=${hash}`)
+export async function getTorrentWebSeeds(instanceId: number, hash: string): Promise<WebSeed[]> {
+	return request<WebSeed[]>(instanceId, `/torrents/webseeds?hash=${hash}`)
 }
 
-export async function setCategory(hashes: string[], category: string): Promise<void> {
-	await request('/torrents/setCategory', {
+export async function setCategory(instanceId: number, hashes: string[], category: string): Promise<void> {
+	await request(instanceId, '/torrents/setCategory', {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
 		body: new URLSearchParams({ hashes: hashes.join('|'), category }),
 	})
 }
 
-export async function addTags(hashes: string[], tags: string): Promise<void> {
-	await request('/torrents/addTags', {
+export async function addTags(instanceId: number, hashes: string[], tags: string): Promise<void> {
+	await request(instanceId, '/torrents/addTags', {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
 		body: new URLSearchParams({ hashes: hashes.join('|'), tags }),
 	})
 }
 
-export async function removeTags(hashes: string[], tags: string): Promise<void> {
-	await request('/torrents/removeTags', {
+export async function removeTags(instanceId: number, hashes: string[], tags: string): Promise<void> {
+	await request(instanceId, '/torrents/removeTags', {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
 		body: new URLSearchParams({ hashes: hashes.join('|'), tags }),
 	})
 }
 
-export async function getTags(): Promise<string[]> {
-	return request<string[]>('/torrents/tags')
+export async function getTags(instanceId: number): Promise<string[]> {
+	return request<string[]>(instanceId, '/torrents/tags')
 }
 
-export async function createTags(tags: string): Promise<void> {
-	await request('/torrents/createTags', {
+export async function createTags(instanceId: number, tags: string): Promise<void> {
+	await request(instanceId, '/torrents/createTags', {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
 		body: new URLSearchParams({ tags }),
 	})
 }
 
-export async function deleteTags(tags: string): Promise<void> {
-	await request('/torrents/deleteTags', {
+export async function deleteTags(instanceId: number, tags: string): Promise<void> {
+	await request(instanceId, '/torrents/deleteTags', {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
 		body: new URLSearchParams({ tags }),
 	})
 }
 
-export async function createCategory(category: string, savePath?: string): Promise<void> {
+export async function createCategory(instanceId: number, category: string, savePath?: string): Promise<void> {
 	const params: Record<string, string> = { category }
 	if (savePath) params.savePath = savePath
-	await request('/torrents/createCategory', {
+	await request(instanceId, '/torrents/createCategory', {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
 		body: new URLSearchParams(params),
 	})
 }
 
-export async function removeCategories(categories: string[]): Promise<void> {
-	await request('/torrents/removeCategories', {
+export async function removeCategories(instanceId: number, categories: string[]): Promise<void> {
+	await request(instanceId, '/torrents/removeCategories', {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
 		body: new URLSearchParams({ categories: categories.join('\n') }),
 	})
 }
 
-export async function setFilePriority(hash: string, ids: number[], priority: number): Promise<void> {
-	await request('/torrents/filePrio', {
+export async function setFilePriority(instanceId: number, hash: string, ids: number[], priority: number): Promise<void> {
+	await request(instanceId, '/torrents/filePrio', {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
 		body: new URLSearchParams({ hash, id: ids.join('|'), priority: priority.toString() }),
 	})
 }
 
-export async function renameTorrent(hash: string, name: string): Promise<void> {
-	await request('/torrents/rename', {
+export async function renameTorrent(instanceId: number, hash: string, name: string): Promise<void> {
+	await request(instanceId, '/torrents/rename', {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
 		body: new URLSearchParams({ hash, name }),
 	})
 }
 
-export async function addTrackers(hash: string, urls: string[]): Promise<void> {
-	await request('/torrents/addTrackers', {
+export async function addTrackers(instanceId: number, hash: string, urls: string[]): Promise<void> {
+	await request(instanceId, '/torrents/addTrackers', {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
 		body: new URLSearchParams({ hash, urls: urls.join('\n') }),
 	})
 }
 
-export async function removeTrackers(hash: string, urls: string[]): Promise<void> {
-	await request('/torrents/removeTrackers', {
+export async function removeTrackers(instanceId: number, hash: string, urls: string[]): Promise<void> {
+	await request(instanceId, '/torrents/removeTrackers', {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
 		body: new URLSearchParams({ hash, urls: urls.join('|') }),
 	})
 }
 
-async function fetchTorrentBlob(hash: string): Promise<Blob> {
-	const res = await fetch(`${BASE}/torrents/export?hash=${hash}`, { credentials: 'include' })
+async function fetchTorrentBlob(instanceId: number, hash: string): Promise<Blob> {
+	const res = await fetch(`${getBase(instanceId)}/torrents/export?hash=${hash}`, { credentials: 'include' })
 	if (!res.ok) throw new Error(`Export failed: ${res.status}`)
 	return res.blob()
 }
@@ -275,15 +259,15 @@ function downloadBlob(blob: Blob, filename: string) {
 	URL.revokeObjectURL(url)
 }
 
-export async function exportTorrents(torrents: { hash: string; name: string }[]): Promise<void> {
+export async function exportTorrents(instanceId: number, torrents: { hash: string; name: string }[]): Promise<void> {
 	if (torrents.length === 1) {
-		const blob = await fetchTorrentBlob(torrents[0].hash)
+		const blob = await fetchTorrentBlob(instanceId, torrents[0].hash)
 		downloadBlob(blob, `${torrents[0].name}.torrent`)
 		return
 	}
 	const zip = new JSZip()
 	for (const t of torrents) {
-		const blob = await fetchTorrentBlob(t.hash)
+		const blob = await fetchTorrentBlob(instanceId, t.hash)
 		zip.file(`${t.name}.torrent`, blob)
 	}
 	const zipBlob = await zip.generateAsync({ type: 'blob' })

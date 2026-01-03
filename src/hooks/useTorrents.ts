@@ -1,140 +1,164 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import * as api from '../api/qbittorrent'
 import type { AddTorrentOptions, TorrentFilterOptions } from '../api/qbittorrent'
+import { useInstance } from './useInstance'
 
 export function useTorrents(options: TorrentFilterOptions = {}) {
+	const instance = useInstance()
 	return useQuery({
-		queryKey: ['torrents', options],
-		queryFn: () => api.getTorrents(options),
+		queryKey: ['torrents', instance.id, options],
+		queryFn: () => api.getTorrents(instance.id, options),
 		refetchInterval: 2000,
 	})
 }
 
 export function useStopTorrents() {
+	const instance = useInstance()
 	const queryClient = useQueryClient()
 	return useMutation({
-		mutationFn: api.stopTorrents,
-		onSuccess: () => queryClient.invalidateQueries({ queryKey: ['torrents'] }),
+		mutationFn: (hashes: string[]) => api.stopTorrents(instance.id, hashes),
+		onSuccess: () => queryClient.invalidateQueries({ queryKey: ['torrents', instance.id] }),
 	})
 }
 
 export function useStartTorrents() {
+	const instance = useInstance()
 	const queryClient = useQueryClient()
 	return useMutation({
-		mutationFn: api.startTorrents,
-		onSuccess: () => queryClient.invalidateQueries({ queryKey: ['torrents'] }),
+		mutationFn: (hashes: string[]) => api.startTorrents(instance.id, hashes),
+		onSuccess: () => queryClient.invalidateQueries({ queryKey: ['torrents', instance.id] }),
 	})
 }
 
 export function useDeleteTorrents() {
+	const instance = useInstance()
 	const queryClient = useQueryClient()
 	return useMutation({
 		mutationFn: ({ hashes, deleteFiles }: { hashes: string[]; deleteFiles?: boolean }) =>
-			api.deleteTorrents(hashes, deleteFiles),
-		onSuccess: () => queryClient.invalidateQueries({ queryKey: ['torrents'] }),
+			api.deleteTorrents(instance.id, hashes, deleteFiles),
+		onSuccess: () => queryClient.invalidateQueries({ queryKey: ['torrents', instance.id] }),
 	})
 }
 
 export function useAddTorrent() {
+	const instance = useInstance()
 	const queryClient = useQueryClient()
 	return useMutation({
 		mutationFn: ({ options, files }: { options: AddTorrentOptions; files?: File[] }) =>
-			api.addTorrent(options, files),
-		onSuccess: () => queryClient.invalidateQueries({ queryKey: ['torrents'] }),
+			api.addTorrent(instance.id, options, files),
+		onSuccess: () => queryClient.invalidateQueries({ queryKey: ['torrents', instance.id] }),
 	})
 }
 
 export function useCategories() {
+	const instance = useInstance()
 	return useQuery({
-		queryKey: ['categories'],
-		queryFn: api.getCategories,
+		queryKey: ['categories', instance.id],
+		queryFn: () => api.getCategories(instance.id),
 	})
 }
 
 export function useTags() {
+	const instance = useInstance()
 	return useQuery({
-		queryKey: ['tags'],
-		queryFn: api.getTags,
+		queryKey: ['tags', instance.id],
+		queryFn: () => api.getTags(instance.id),
 	})
 }
 
 export function useSetCategory() {
+	const instance = useInstance()
 	const queryClient = useQueryClient()
 	return useMutation({
 		mutationFn: ({ hashes, category }: { hashes: string[]; category: string }) =>
-			api.setCategory(hashes, category),
-		onSuccess: () => queryClient.invalidateQueries({ queryKey: ['torrents'] }),
+			api.setCategory(instance.id, hashes, category),
+		onSuccess: () => queryClient.invalidateQueries({ queryKey: ['torrents', instance.id] }),
 	})
 }
 
 export function useAddTags() {
+	const instance = useInstance()
 	const queryClient = useQueryClient()
 	return useMutation({
 		mutationFn: ({ hashes, tags }: { hashes: string[]; tags: string }) =>
-			api.addTags(hashes, tags),
+			api.addTags(instance.id, hashes, tags),
 		onSuccess: () => {
-			queryClient.invalidateQueries({ queryKey: ['torrents'] })
-			queryClient.invalidateQueries({ queryKey: ['tags'] })
+			queryClient.invalidateQueries({ queryKey: ['torrents', instance.id] })
+			queryClient.invalidateQueries({ queryKey: ['tags', instance.id] })
 		},
 	})
 }
 
 export function useRemoveTags() {
+	const instance = useInstance()
 	const queryClient = useQueryClient()
 	return useMutation({
 		mutationFn: ({ hashes, tags }: { hashes: string[]; tags: string }) =>
-			api.removeTags(hashes, tags),
+			api.removeTags(instance.id, hashes, tags),
 		onSuccess: () => {
-			queryClient.invalidateQueries({ queryKey: ['torrents'] })
-			queryClient.invalidateQueries({ queryKey: ['tags'] })
+			queryClient.invalidateQueries({ queryKey: ['torrents', instance.id] })
+			queryClient.invalidateQueries({ queryKey: ['tags', instance.id] })
 		},
 	})
 }
 
 export function useRenameTorrent() {
+	const instance = useInstance()
 	const queryClient = useQueryClient()
 	return useMutation({
 		mutationFn: ({ hash, name }: { hash: string; name: string }) =>
-			api.renameTorrent(hash, name),
-		onSuccess: () => queryClient.invalidateQueries({ queryKey: ['torrents'] }),
+			api.renameTorrent(instance.id, hash, name),
+		onSuccess: () => queryClient.invalidateQueries({ queryKey: ['torrents', instance.id] }),
 	})
 }
 
 export function useCreateTag() {
+	const instance = useInstance()
 	const queryClient = useQueryClient()
 	return useMutation({
-		mutationFn: (tag: string) => api.createTags(tag),
-		onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tags'] }),
+		mutationFn: (tag: string) => api.createTags(instance.id, tag),
+		onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tags', instance.id] }),
 	})
 }
 
 export function useDeleteTag() {
+	const instance = useInstance()
 	const queryClient = useQueryClient()
 	return useMutation({
-		mutationFn: (tag: string) => api.deleteTags(tag),
+		mutationFn: (tag: string) => api.deleteTags(instance.id, tag),
 		onSuccess: () => {
-			queryClient.invalidateQueries({ queryKey: ['tags'] })
-			queryClient.invalidateQueries({ queryKey: ['torrents'] })
+			queryClient.invalidateQueries({ queryKey: ['tags', instance.id] })
+			queryClient.invalidateQueries({ queryKey: ['torrents', instance.id] })
 		},
 	})
 }
 
 export function useCreateCategory() {
+	const instance = useInstance()
 	const queryClient = useQueryClient()
 	return useMutation({
 		mutationFn: ({ name, savePath }: { name: string; savePath?: string }) =>
-			api.createCategory(name, savePath),
-		onSuccess: () => queryClient.invalidateQueries({ queryKey: ['categories'] }),
+			api.createCategory(instance.id, name, savePath),
+		onSuccess: () => queryClient.invalidateQueries({ queryKey: ['categories', instance.id] }),
 	})
 }
 
 export function useDeleteCategory() {
+	const instance = useInstance()
 	const queryClient = useQueryClient()
 	return useMutation({
-		mutationFn: (name: string) => api.removeCategories([name]),
+		mutationFn: (name: string) => api.removeCategories(instance.id, [name]),
 		onSuccess: () => {
-			queryClient.invalidateQueries({ queryKey: ['categories'] })
-			queryClient.invalidateQueries({ queryKey: ['torrents'] })
+			queryClient.invalidateQueries({ queryKey: ['categories', instance.id] })
+			queryClient.invalidateQueries({ queryKey: ['torrents', instance.id] })
 		},
+	})
+}
+
+export function useExportTorrents() {
+	const instance = useInstance()
+	return useMutation({
+		mutationFn: (torrents: { hash: string; name: string }[]) =>
+			api.exportTorrents(instance.id, torrents),
 	})
 }

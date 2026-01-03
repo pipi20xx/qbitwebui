@@ -1,0 +1,129 @@
+import { Hono } from 'hono'
+import { db, type Instance } from '../db'
+import { loginToQbt as qbtLogin } from '../utils/qbt'
+import { authMiddleware } from '../middleware/auth'
+
+const proxy = new Hono()
+
+proxy.use('*', authMiddleware)
+
+interface QbtSession {
+	cookie: string
+	expires: number
+}
+
+const qbtSessions = new Map<number, QbtSession>()
+const loginInProgress = new Map<number, Promise<string>>()
+const SESSION_TTL = 30 * 60 * 1000
+
+async function loginToQbt(instance: Instance): Promise<string> {
+	const existingLogin = loginInProgress.get(instance.id)
+	if (existingLogin) {
+		return existingLogin
+	}
+
+	const loginPromise = (async () => {
+		const result = await qbtLogin(instance)
+		if (!result.success) {
+			throw new Error(result.error)
+		}
+		qbtSessions.set(instance.id, { cookie: result.cookie, expires: Date.now() + SESSION_TTL })
+		return result.cookie
+	})()
+
+	loginInProgress.set(instance.id, loginPromise)
+	try {
+		return await loginPromise
+	} finally {
+		loginInProgress.delete(instance.id)
+	}
+}
+
+async function getQbtSession(instance: Instance): Promise<string> {
+	const cached = qbtSessions.get(instance.id)
+	if (cached && cached.expires > Date.now()) {
+		return cached.cookie
+	}
+	return loginToQbt(instance)
+}
+
+export function clearQbtSession(instanceId: number) {
+	qbtSessions.delete(instanceId)
+	loginInProgress.delete(instanceId)
+}
+
+proxy.all('/:id/qbt/*', async (c) => {
+	const user = c.get('user')
+	const instanceId = Number(c.req.param('id'))
+
+	if (isNaN(instanceId)) {
+		return c.json({ error: 'Invalid instance ID' }, 400)
+	}
+
+	const instance = db.query<Instance, [number, number]>(
+		'SELECT * FROM instances WHERE id = ? AND user_id = ?'
+	).get(instanceId, user.id)
+
+	if (!instance) {
+		return c.json({ error: 'Instance not found' }, 404)
+	}
+
+	const path = c.req.path.replace(`/api/instances/${instanceId}/qbt`, '')
+	const queryString = c.req.url.includes('?') ? c.req.url.slice(c.req.url.indexOf('?')) : ''
+	const targetUrl = `${instance.url}/api${path}${queryString}`
+
+	const makeRequest = async (cookie: string) => {
+		const headers = new Headers()
+		headers.set('Cookie', cookie)
+
+		const contentType = c.req.header('content-type') || ''
+		let body: string | FormData | ArrayBuffer | undefined
+
+		if (c.req.method !== 'GET' && c.req.method !== 'HEAD') {
+			if (contentType.includes('multipart/form-data')) {
+				body = await c.req.formData()
+			} else if (contentType.includes('application/x-www-form-urlencoded')) {
+				headers.set('Content-Type', contentType)
+				body = await c.req.text()
+			} else if (contentType.includes('application/json')) {
+				headers.set('Content-Type', contentType)
+				body = await c.req.text()
+			} else if (contentType) {
+				headers.set('Content-Type', contentType)
+				body = await c.req.arrayBuffer()
+			}
+		}
+
+		return fetch(targetUrl, {
+			method: c.req.method,
+			headers,
+			body,
+		})
+	}
+
+	try {
+		let cookie = await getQbtSession(instance)
+		let res = await makeRequest(cookie)
+
+		if (res.status === 401 || res.status === 403) {
+			clearQbtSession(instance.id)
+			cookie = await loginToQbt(instance)
+			res = await makeRequest(cookie)
+		}
+
+		const responseHeaders = new Headers()
+		const contentType = res.headers.get('content-type')
+		if (contentType) {
+			responseHeaders.set('Content-Type', contentType)
+		}
+
+		return new Response(res.body, {
+			status: res.status,
+			headers: responseHeaders,
+		})
+	} catch {
+		return c.json({ error: 'Failed to connect to qBittorrent instance' }, 502)
+	}
+})
+
+export default proxy

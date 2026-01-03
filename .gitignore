@@ -4,3 +4,7 @@ dist
 *.log
 CLAUDE.md
 docker-compose.yml
+data/
+*.db
+*.db-wal
+*.db-shm
