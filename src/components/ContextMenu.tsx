@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { useCategories, useTags, useStartTorrents, useStopTorrents, useDeleteTorrents, useSetCategory, useAddTags, useRemoveTags, useRenameTorrent } from '../hooks/useTorrents'
-import { exportTorrents } from '../api/qbittorrent'
+import { useCategories, useTags, useStartTorrents, useStopTorrents, useDeleteTorrents, useSetCategory, useAddTags, useRemoveTags, useRenameTorrent, useExportTorrents } from '../hooks/useTorrents'
 import type { Torrent } from '../types/qbittorrent'
 
 interface Props {
@@ -28,6 +27,7 @@ export function ContextMenu({ x, y, torrents, onClose }: Props) {
 	const removeTagsMutation = useRemoveTags()
 	const renameMutation = useRenameTorrent()
 	const deleteMutation = useDeleteTorrents()
+	const exportMutation = useExportTorrents()
 
 	const hashes = torrents.map(t => t.hash)
 	const isSingle = torrents.length === 1
@@ -107,7 +107,7 @@ export function ContextMenu({ x, y, torrents, onClose }: Props) {
 	}
 
 	function handleExport() {
-		exportTorrents(torrents.map(t => ({ hash: t.hash, name: t.name })))
+		exportMutation.mutate(torrents.map(t => ({ hash: t.hash, name: t.name })))
 		onClose()
 	}
 
