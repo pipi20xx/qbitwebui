@@ -62,6 +62,7 @@ export interface SyncServerState {
 	alltime_ul: number
 	dl_info_speed: number
 	up_info_speed: number
+	free_space_on_disk: number
 }
 
 export interface SyncMaindata {

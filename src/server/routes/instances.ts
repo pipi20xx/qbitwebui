@@ -54,6 +54,7 @@ interface SyncMaindata {
 	server_state: {
 		alltime_dl: number
 		alltime_ul: number
+		free_space_on_disk: number
 	}
 }
 
@@ -70,6 +71,7 @@ interface InstanceStats {
 	upSpeed: number
 	allTimeDownload: number
 	allTimeUpload: number
+	freeSpaceOnDisk: number
 }
 
 async function fetchInstanceStats(instance: Instance): Promise<InstanceStats> {
@@ -86,6 +88,7 @@ async function fetchInstanceStats(instance: Instance): Promise<InstanceStats> {
 		upSpeed: 0,
 		allTimeDownload: 0,
 		allTimeUpload: 0,
+		freeSpaceOnDisk: 0,
 	}
 
 	try {
@@ -116,6 +119,7 @@ async function fetchInstanceStats(instance: Instance): Promise<InstanceStats> {
 		base.upSpeed = transfer.up_info_speed
 		base.allTimeDownload = sync.server_state.alltime_dl
 		base.allTimeUpload = sync.server_state.alltime_ul
+		base.freeSpaceOnDisk = sync.server_state.free_space_on_disk
 
 		for (const t of torrents) {
 			if (t.state === 'pausedUP' || t.state === 'pausedDL' || t.state === 'stoppedUP' || t.state === 'stoppedDL') {

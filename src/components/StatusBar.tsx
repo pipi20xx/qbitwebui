@@ -1,10 +1,62 @@
+import { useState, useRef, useEffect } from 'react'
 import { useTransferInfo } from '../hooks/useTransferInfo'
 import { useSyncMaindata } from '../hooks/useSyncMaindata'
+import { usePagination } from '../hooks/usePagination'
+import { PER_PAGE_OPTIONS } from '../utils/pagination'
 import { formatSpeed, formatSize } from '../utils/format'
+
+function PerPageDropdown({ value, onChange }: { value: number; onChange: (v: number) => void }) {
+	const [open, setOpen] = useState(false)
+	const ref = useRef<HTMLDivElement>(null)
+
+	useEffect(() => {
+		function handleClickOutside(e: MouseEvent) {
+			if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+		}
+		document.addEventListener('mousedown', handleClickOutside)
+		return () => document.removeEventListener('mousedown', handleClickOutside)
+	}, [])
+
+	return (
+		<div ref={ref} className="relative">
+			<button
+				onClick={() => setOpen(!open)}
+				className="flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs font-medium transition-all duration-200"
+				style={{ color: 'var(--text-muted)', backgroundColor: 'var(--bg-tertiary)' }}
+			>
+				<span>{value}</span>
+				<svg className={`w-3 h-3 transition-transform ${open ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+					<path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+				</svg>
+			</button>
+			{open && (
+				<div
+					className="absolute bottom-full left-0 mb-1 min-w-[60px] rounded-lg border shadow-xl z-[100]"
+					style={{ backgroundColor: 'var(--bg-tertiary)', borderColor: 'var(--border)' }}
+				>
+					{PER_PAGE_OPTIONS.map((n) => (
+						<button
+							key={n}
+							onClick={() => { onChange(n); setOpen(false) }}
+							className="w-full px-3 py-1.5 text-xs text-left transition-colors"
+							style={{
+								color: value === n ? 'var(--accent)' : 'var(--text-muted)',
+								backgroundColor: value === n ? 'color-mix(in srgb, var(--accent) 10%, transparent)' : 'transparent',
+							}}
+						>
+							{n}
+						</button>
+					))}
+				</div>
+			)}
+		</div>
+	)
+}
 
 export function StatusBar() {
 	const { data } = useTransferInfo()
 	const { data: syncData } = useSyncMaindata()
+	const { page, perPage, totalItems, totalPages, setPage, setPerPage } = usePagination()
 
 	const statusConfig = {
 		connected: { label: 'Connected', type: 'success' as const },
@@ -18,11 +70,14 @@ export function StatusBar() {
 		error: 'var(--error)',
 	}
 
+	const startItem = totalItems === 0 ? 0 : (page - 1) * perPage + 1
+	const endItem = Math.min(page * perPage, totalItems)
+
 	return (
-		<div className="relative flex items-center px-6 py-3 backdrop-blur-md border-t" style={{ backgroundColor: 'color-mix(in srgb, var(--bg-secondary) 80%, transparent)', borderColor: 'var(--border)' }}>
+		<div className="relative grid grid-cols-3 items-center px-6 py-3 backdrop-blur-md border-t" style={{ backgroundColor: 'color-mix(in srgb, var(--bg-secondary) 80%, transparent)', borderColor: 'var(--border)' }}>
 			<div className="absolute inset-0" style={{ background: 'linear-gradient(to right, transparent, color-mix(in srgb, var(--accent) 1%, transparent), transparent)' }} />
 
-			<div className="relative flex-1 flex items-center gap-6">
+			<div className="relative flex items-center gap-6">
 				<div className="flex items-center gap-2.5">
 					<div className="w-2 h-2 rounded-full shadow-lg" style={{ backgroundColor: statusColors[statusConfig.type], boxShadow: `0 0 10px ${statusColors[statusConfig.type]}50` }} />
 					<span className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>{statusConfig.label}</span>
@@ -50,16 +105,64 @@ export function StatusBar() {
 				</div>
 			</div>
 
-			<div className="relative flex items-center justify-center">
+			<div className="relative flex items-center justify-center gap-3">
+				<div className="flex items-center gap-1">
+					<button
+						onClick={() => setPage(1)}
+						disabled={page === 1}
+						className="p-1 rounded transition-colors disabled:opacity-30"
+						style={{ color: 'var(--text-muted)' }}
+					>
+						<svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+							<path strokeLinecap="round" strokeLinejoin="round" d="M18.75 19.5l-7.5-7.5 7.5-7.5m-6 15L5.25 12l7.5-7.5" />
+						</svg>
+					</button>
+					<button
+						onClick={() => setPage(page - 1)}
+						disabled={page === 1}
+						className="p-1 rounded transition-colors disabled:opacity-30"
+						style={{ color: 'var(--text-muted)' }}
+					>
+						<svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+							<path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+						</svg>
+					</button>
+				</div>
+				<span className="text-xs tabular-nums" style={{ color: 'var(--text-muted)' }}>
+					{startItem}-{endItem} of {totalItems}
+				</span>
+				<div className="flex items-center gap-1">
+					<button
+						onClick={() => setPage(page + 1)}
+						disabled={page === totalPages}
+						className="p-1 rounded transition-colors disabled:opacity-30"
+						style={{ color: 'var(--text-muted)' }}
+					>
+						<svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+							<path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+						</svg>
+					</button>
+					<button
+						onClick={() => setPage(totalPages)}
+						disabled={page === totalPages}
+						className="p-1 rounded transition-colors disabled:opacity-30"
+						style={{ color: 'var(--text-muted)' }}
+					>
+						<svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+							<path strokeLinecap="round" strokeLinejoin="round" d="M5.25 4.5l7.5 7.5-7.5 7.5m6-15l7.5 7.5-7.5 7.5" />
+						</svg>
+					</button>
+				</div>
+				<PerPageDropdown value={perPage} onChange={setPerPage} />
+			</div>
+
+			<div className="relative flex items-center justify-end gap-4">
 				<div className="flex items-center gap-2 px-3 py-1.5 rounded-lg border" style={{ backgroundColor: 'var(--bg-tertiary)', borderColor: 'var(--border)' }}>
 					<span className="text-[10px] font-medium uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Total</span>
 					<span className="text-xs font-mono" style={{ color: 'var(--accent)' }}>{formatSize(syncData?.server_state.alltime_dl ?? 0)}</span>
 					<span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>/</span>
 					<span className="text-xs font-mono" style={{ color: 'var(--warning)' }}>{formatSize(syncData?.server_state.alltime_ul ?? 0)}</span>
 				</div>
-			</div>
-
-			<div className="relative flex-1 flex items-center justify-end gap-4">
 				<div className="flex items-center gap-2 px-3 py-1.5 rounded-lg border" style={{ backgroundColor: 'var(--bg-tertiary)', borderColor: 'var(--border)' }}>
 					<span className="text-[10px] font-medium uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>DHT</span>
 					<span className="text-xs font-mono font-medium" style={{ color: 'var(--text-secondary)' }}>{data?.dht_nodes ?? 0}</span>

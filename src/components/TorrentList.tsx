@@ -9,6 +9,7 @@ import { ContextMenu } from './ContextMenu'
 import { RatioThresholdPopup } from './RatioThresholdPopup'
 import { loadRatioThreshold, saveRatioThreshold } from '../utils/ratioThresholds'
 import { COLUMNS, DEFAULT_VISIBLE_COLUMNS, DEFAULT_COLUMN_ORDER, type SortKey } from './columns'
+import { usePagination } from '../hooks/usePagination'
 
 const DEFAULT_PANEL_HEIGHT = 220
 
@@ -123,6 +124,8 @@ export function TorrentList() {
 	const createTagMutation = useCreateTag()
 	const deleteTagMutation = useDeleteTag()
 
+	const { page, perPage, setTotalItems, setPage } = usePagination()
+
 	const filtered = useMemo(() => {
 		let result = torrents
 		if (tagFilter) {
@@ -150,6 +153,20 @@ export function TorrentList() {
 		})
 		return result
 	}, [torrents, tagFilter, trackerFilter, search, sortKey, sortAsc])
+
+	useEffect(() => {
+		setTotalItems(filtered.length)
+	}, [filtered.length, setTotalItems])
+
+	useEffect(() => {
+		const maxPage = Math.max(1, Math.ceil(filtered.length / perPage))
+		if (page > maxPage) setPage(maxPage)
+	}, [filtered.length, perPage, page, setPage])
+
+	const paginatedTorrents = useMemo(() => {
+		const start = (page - 1) * perPage
+		return filtered.slice(start, start + perPage)
+	}, [filtered, page, perPage])
 
 	function handleSelect(hash: string, multi: boolean) {
 		setSelected((prev) => {
@@ -376,7 +393,7 @@ export function TorrentList() {
 							</tr>
 						</thead>
 						<tbody>
-							{filtered.map((t) => (
+							{paginatedTorrents.map((t) => (
 								<TorrentRow
 									key={t.hash}
 									torrent={t}

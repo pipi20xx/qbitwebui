@@ -23,6 +23,7 @@ interface InstanceStats {
 	upSpeed: number
 	allTimeDownload: number
 	allTimeUpload: number
+	freeSpaceOnDisk: number
 }
 
 function SpeedGraph({ history, color }: { history: number[]; color: string }) {
@@ -241,11 +242,7 @@ export function InstanceManager({ username, onSelectInstance, onLogout }: Props)
 			<header className="flex items-center justify-between px-6 py-3 border-b" style={{ borderColor: 'var(--border)' }}>
 				<div className="flex items-center gap-4">
 					<div className="flex items-center gap-3">
-						<div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: 'linear-gradient(to bottom right, var(--accent), color-mix(in srgb, var(--accent) 70%, black))' }}>
-							<svg className="w-4 h-4" style={{ color: 'var(--accent-contrast)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-								<path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
-							</svg>
-						</div>
+						<img src="/logo.png" alt="qbitwebui" className="w-8 h-8" />
 						<span className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>qbitwebui</span>
 					</div>
 					<div className="flex items-center gap-1 p-1 rounded-lg" style={{ backgroundColor: 'var(--bg-secondary)' }}>
@@ -599,7 +596,7 @@ export function InstanceManager({ username, onSelectInstance, onLogout }: Props)
 										</div>
 									</div>
 									{instanceStats?.online && (
-										<div className="mt-3 pt-3 border-t flex items-center gap-6 text-xs" style={{ borderColor: 'var(--border)' }}>
+										<div className="mt-3 pt-3 border-t grid grid-cols-3 items-center text-xs" style={{ borderColor: 'var(--border)' }}>
 											<div className="flex items-center gap-4">
 												<span style={{ color: 'var(--text-muted)' }}>
 													<span style={{ color: 'var(--text-secondary)' }}>{instanceStats.total}</span> torrents
@@ -611,7 +608,10 @@ export function InstanceManager({ username, onSelectInstance, onLogout }: Props)
 													<span style={{ color: '#a6e3a1' }}>{instanceStats.seeding}</span> seed
 												</span>
 											</div>
-											<div className="flex items-center gap-3 ml-auto">
+											<span className="text-center" style={{ color: 'var(--text-muted)' }}>
+												Free space: {formatSize(instanceStats.freeSpaceOnDisk)}
+											</span>
+											<div className="flex items-center gap-3 justify-end">
 												<span style={{ color: 'var(--accent)' }}>↓ {formatSpeed(instanceStats.dlSpeed)}</span>
 												<span style={{ color: '#a6e3a1' }}>↑ {formatSpeed(instanceStats.upSpeed)}</span>
 											</div>
