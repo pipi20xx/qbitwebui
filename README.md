@@ -1,5 +1,3 @@
-# qbitwebui
-
 <div align="center"> 
  <img width="200" height="200" alt="logo" src="https://github.com/user-attachments/assets/431cf92d-d8e6-4be7-a5b6-642ed6ab9898" />
 
@@ -14,19 +12,30 @@ Built with [React](https://react.dev/), [Hono](https://hono.dev/), and [Bun](htt
 </div>
 
 <div align="center">
-  <img width="800" alt="demo1" src="https://github.com/user-attachments/assets/8eec9bf3-0b3e-4293-a8a7-d87d42e64cec" />
+  <img width="800" alt="demo1" src="https://github.com/user-attachments/assets/2338e919-47be-44e8-85aa-8f575ee50b1c" />
+  <img width="800" alt="demo2" src="https://github.com/user-attachments/assets/d8efc3d3-ddff-4462-ab79-967359a1e21a" />
 </div>
 
 <details>
-<summary><h3>More screenshots</h3></summary>
-
+<summary><h3>Themes</h3></summary>
 <div align="center">
-  <img width="800" alt="demo4" src="https://github.com/user-attachments/assets/70ac1091-3487-414c-b0dd-1a1ae81688eb" />
-  <img width="800" alt="demo5" src="https://github.com/user-attachments/assets/227ec87c-41a6-4c2d-9b0c-f83541ff1bcf" />
-  <img width="800" alt="demo2" src="https://github.com/user-attachments/assets/959d2e89-b12d-4779-818e-7e21739787d5" />
-  <img width="800" alt="demo3" src="https://github.com/user-attachments/assets/ba4c377e-2015-4ca5-bc0d-db283c828171" />
+<img width="800" height="1720" alt="catppuccin" src="https://github.com/user-attachments/assets/9bae8af1-3ff9-49b7-80e2-4cc9379ce8ca" />
+<img width="800" height="1720" alt="dracula" src="https://github.com/user-attachments/assets/99c84462-0d0a-4a19-bfa5-b70bf9d0ce2e" />
+<img width="800" height="1720" alt="nord" src="https://github.com/user-attachments/assets/f642b0ea-313f-428d-81e9-1bb8aef3dd12" />
+<img width="800" height="1720" alt="gruvbox" src="https://github.com/user-attachments/assets/4b0ce8ce-6bbe-4ca0-a4c0-9cf1216d9b80" />
 </div>
+</details>
 
+<details>
+<summary><h3>Mobile UI (PWA)</h3></summary>
+<div align="center">
+<table>
+  <tr>
+    <td><img width="295" alt="IMG_3518" src="https://github.com/user-attachments/assets/0990bf2e-ce86-4f56-90e4-1093e30acb33" /></td>
+    <td><img width="295" alt="IMG_3519" src="https://github.com/user-attachments/assets/455cecd4-215c-4d1c-aaf9-95860037c0c8" /></td>
+  </tr>
+</table>
+</div>
 </details>
 
 ## Features
