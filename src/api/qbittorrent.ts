@@ -277,3 +277,44 @@ export async function exportTorrents(instanceId: number, torrents: { hash: strin
 	const zipBlob = await zip.generateAsync({ type: 'blob' })
 	downloadBlob(zipBlob, 'torrents.zip')
 }
+
+export interface SpeedPreferences {
+	dl_limit: number
+	up_limit: number
+	alt_dl_limit: number
+	alt_up_limit: number
+	scheduler_enabled: boolean
+	schedule_from_hour: number
+	schedule_from_min: number
+	schedule_to_hour: number
+	schedule_to_min: number
+	scheduler_days: number
+	limit_utp_rate: boolean
+	limit_tcp_overhead: boolean
+	limit_lan_peers: boolean
+}
+
+export async function getSpeedLimitsMode(instanceId: number): Promise<number> {
+	const res = await fetch(`${getBase(instanceId)}/transfer/speedLimitsMode`, { credentials: 'include' })
+	return Number(await res.text())
+}
+
+export async function toggleSpeedLimitsMode(instanceId: number): Promise<void> {
+	await fetch(`${getBase(instanceId)}/transfer/toggleSpeedLimitsMode`, {
+		method: 'POST',
+		credentials: 'include',
+	})
+}
+
+export async function getPreferences(instanceId: number): Promise<SpeedPreferences> {
+	return request<SpeedPreferences>(instanceId, '/app/preferences')
+}
+
+export async function setPreferences(instanceId: number, prefs: Partial<SpeedPreferences>): Promise<void> {
+	await fetch(`${getBase(instanceId)}/app/setPreferences`, {
+		method: 'POST',
+		credentials: 'include',
+		headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+		body: new URLSearchParams({ json: JSON.stringify(prefs) }),
+	})
+}

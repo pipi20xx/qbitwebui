@@ -1,9 +1,16 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { useTransferInfo } from '../hooks/useTransferInfo'
 import { useSyncMaindata } from '../hooks/useSyncMaindata'
 import { usePagination } from '../hooks/usePagination'
+import { useInstance } from '../hooks/useInstance'
 import { PER_PAGE_OPTIONS } from '../utils/pagination'
 import { formatSpeed, formatSize } from '../utils/format'
+import { getSpeedLimitsMode, toggleSpeedLimitsMode } from '../api/qbittorrent'
+
+function formatLimit(bytes: number): string {
+	if (bytes >= 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(0)}M`
+	return `${(bytes / 1024).toFixed(0)}K`
+}
 
 function PerPageDropdown({ value, onChange }: { value: number; onChange: (v: number) => void }) {
 	const [open, setOpen] = useState(false)
@@ -53,10 +60,38 @@ function PerPageDropdown({ value, onChange }: { value: number; onChange: (v: num
 	)
 }
 
+function useAltSpeedMode(instanceId: number) {
+	const [enabled, setEnabled] = useState(false)
+	const [toggling, setToggling] = useState(false)
+
+	useEffect(() => {
+		let mounted = true
+		const checkMode = async () => {
+			const mode = await getSpeedLimitsMode(instanceId).catch(() => 0)
+			if (mounted) setEnabled(mode === 1)
+		}
+		checkMode()
+		const interval = setInterval(checkMode, 2000)
+		return () => { mounted = false; clearInterval(interval) }
+	}, [instanceId])
+
+	const toggle = useCallback(async () => {
+		if (toggling) return
+		setToggling(true)
+		const ok = await toggleSpeedLimitsMode(instanceId).then(() => true).catch(() => false)
+		if (ok) setEnabled(prev => !prev)
+		setToggling(false)
+	}, [instanceId, toggling])
+
+	return { enabled, toggling, toggle }
+}
+
 export function StatusBar() {
+	const instance = useInstance()
 	const { data } = useTransferInfo()
 	const { data: syncData } = useSyncMaindata()
 	const { page, perPage, totalItems, totalPages, setPage, setPerPage } = usePagination()
+	const altSpeed = useAltSpeedMode(instance.id)
 
 	const statusConfig = {
 		connected: { label: 'Connected', type: 'success' as const },
@@ -93,6 +128,15 @@ export function StatusBar() {
 						<span className="text-xs font-mono font-medium" style={{ color: 'var(--accent)' }}>
 							{formatSpeed(data?.dl_info_speed ?? 0)}
 						</span>
+						{(data?.dl_rate_limit ?? 0) > 0 && (
+							<span
+								className="px-1.5 py-0.5 rounded text-[10px] font-medium"
+								style={{ backgroundColor: 'color-mix(in srgb, var(--accent) 20%, transparent)', color: 'var(--accent)' }}
+								title={`Download limit: ${formatSpeed(data?.dl_rate_limit ?? 0)}`}
+							>
+								{formatLimit(data?.dl_rate_limit ?? 0)}
+							</span>
+						)}
 					</div>
 					<div className="flex items-center gap-2">
 						<svg className="w-3.5 h-3.5" style={{ color: 'var(--warning)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -101,8 +145,36 @@ export function StatusBar() {
 						<span className="text-xs font-mono font-medium" style={{ color: 'var(--warning)' }}>
 							{formatSpeed(data?.up_info_speed ?? 0)}
 						</span>
+						{(data?.up_rate_limit ?? 0) > 0 && (
+							<span
+								className="px-1.5 py-0.5 rounded text-[10px] font-medium"
+								style={{ backgroundColor: 'color-mix(in srgb, var(--warning) 20%, transparent)', color: 'var(--warning)' }}
+								title={`Upload limit: ${formatSpeed(data?.up_rate_limit ?? 0)}`}
+							>
+								{formatLimit(data?.up_rate_limit ?? 0)}
+							</span>
+						)}
 					</div>
 				</div>
+
+				<div className="h-4 w-px" style={{ backgroundColor: 'var(--border)' }} />
+
+				<button
+					onClick={altSpeed.toggle}
+					disabled={altSpeed.toggling}
+					className="flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs font-medium transition-all"
+					style={{
+						backgroundColor: altSpeed.enabled ? 'color-mix(in srgb, var(--accent) 20%, transparent)' : 'var(--bg-tertiary)',
+						color: altSpeed.enabled ? 'var(--accent)' : 'var(--text-muted)',
+						opacity: altSpeed.toggling ? 0.5 : 1,
+					}}
+					title={altSpeed.enabled ? 'Alternative speed limits active (click to disable)' : 'Click to enable alternative speed limits'}
+				>
+					<svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+						<path strokeLinecap="round" strokeLinejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
+					</svg>
+					<span>Alt</span>
+				</button>
 			</div>
 
 			<div className="relative flex items-center justify-center gap-3">

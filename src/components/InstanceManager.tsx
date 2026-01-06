@@ -1,6 +1,7 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { getInstances, createInstance, updateInstance, deleteInstance, type Instance, type CreateInstanceData } from '../api/instances'
 import { logout, changePassword } from '../api/auth'
+import { getPreferences, setPreferences, type SpeedPreferences } from '../api/qbittorrent'
 import { ThemeSwitcher } from './ThemeSwitcher'
 import { SearchPanel } from './SearchPanel'
 import { useUpdateCheck } from '../hooks/useUpdateCheck'
@@ -26,6 +27,28 @@ interface InstanceStats {
 	freeSpaceOnDisk: number
 }
 
+const SCHEDULER_DAYS = [
+	{ value: 0, label: 'Every day' },
+	{ value: 1, label: 'Weekdays' },
+	{ value: 2, label: 'Weekend' },
+	{ value: 3, label: 'Monday' },
+	{ value: 4, label: 'Tuesday' },
+	{ value: 5, label: 'Wednesday' },
+	{ value: 6, label: 'Thursday' },
+	{ value: 7, label: 'Friday' },
+	{ value: 8, label: 'Saturday' },
+	{ value: 9, label: 'Sunday' },
+]
+
+function bytesToKB(bytes: number): string {
+	return bytes === 0 ? '0' : Math.round(bytes / 1024).toString()
+}
+
+function kbToBytes(kb: string): number {
+	const val = parseInt(kb, 10)
+	return isNaN(val) || val < 0 ? 0 : val * 1024
+}
+
 function SpeedGraph({ history, color }: { history: number[]; color: string }) {
 	const h = 32
 	const w = 80
@@ -37,6 +60,100 @@ function SpeedGraph({ history, color }: { history: number[]; color: string }) {
 		<svg width={w} height={h} className="opacity-60">
 			<polyline points={points} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
 		</svg>
+	)
+}
+
+function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
+	return (
+		<button
+			onClick={() => onChange(!checked)}
+			className="relative w-10 h-6 rounded-full transition-all duration-200 border shrink-0"
+			style={{
+				backgroundColor: checked ? 'var(--accent)' : 'var(--bg-primary)',
+				borderColor: checked ? 'var(--accent)' : 'var(--border)',
+			}}
+		>
+			<div
+				className="absolute top-0.5 w-5 h-5 rounded-full transition-all duration-200"
+				style={{
+					left: checked ? '18px' : '2px',
+					backgroundColor: checked ? 'white' : 'var(--text-muted)',
+				}}
+			/>
+		</button>
+	)
+}
+
+function Checkbox({ checked, onChange, label }: { checked: boolean; onChange: (v: boolean) => void; label: string }) {
+	return (
+		<button onClick={() => onChange(!checked)} className="flex items-center gap-3 w-full text-left">
+			<div
+				className="w-5 h-5 rounded flex items-center justify-center border transition-colors shrink-0"
+				style={{
+					backgroundColor: checked ? 'var(--accent)' : 'transparent',
+					borderColor: checked ? 'var(--accent)' : 'var(--border)',
+				}}
+			>
+				{checked && (
+					<svg className="w-3 h-3" style={{ color: 'white' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+						<path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+					</svg>
+				)}
+			</div>
+			<span className="text-sm" style={{ color: 'var(--text-secondary)' }}>{label}</span>
+		</button>
+	)
+}
+
+function Select<T extends string | number>({ value, options, onChange, className }: { value: T; options: { value: T; label: string }[]; onChange: (v: T) => void; className?: string }) {
+	const [open, setOpen] = useState(false)
+	const ref = useRef<HTMLDivElement>(null)
+
+	useEffect(() => {
+		function handleClickOutside(e: MouseEvent) {
+			if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+		}
+		document.addEventListener('mousedown', handleClickOutside)
+		return () => document.removeEventListener('mousedown', handleClickOutside)
+	}, [])
+
+	const selected = options.find(o => o.value === value)
+
+	return (
+		<div ref={ref} className={`relative ${className || ''}`}>
+			<button
+				type="button"
+				onClick={() => setOpen(!open)}
+				className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg border text-sm"
+				style={{ backgroundColor: 'var(--bg-tertiary)', borderColor: 'var(--border)', color: 'var(--text-primary)' }}
+			>
+				<span className="font-mono">{selected?.label}</span>
+				<svg className={`w-4 h-4 transition-transform ${open ? 'rotate-180' : ''}`} style={{ color: 'var(--text-muted)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+					<path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+				</svg>
+			</button>
+			{open && (
+				<div
+					className="absolute top-full left-0 right-0 mt-1 max-h-48 overflow-auto rounded-lg border shadow-xl z-50"
+					style={{ backgroundColor: 'var(--bg-tertiary)', borderColor: 'var(--border)' }}
+				>
+					{options.map((o) => (
+						<button
+							key={o.value}
+							type="button"
+							onClick={() => { onChange(o.value); setOpen(false) }}
+							className="w-full px-3 py-2 text-left text-sm font-mono transition-colors"
+							style={{
+								color: value === o.value ? 'var(--accent)' : 'var(--text-primary)',
+								backgroundColor: value === o.value ? 'color-mix(in srgb, var(--accent) 10%, transparent)' : 'transparent',
+							}}
+						>
+							{o.label}
+						</button>
+					))}
+				</div>
+			)}
+		</div>
 	)
 }
 
@@ -66,6 +183,22 @@ export function InstanceManager({ username, onSelectInstance, onLogout }: Props)
 	const [changingPassword, setChangingPassword] = useState(false)
 	const [dlHistory, setDlHistory] = useState<number[]>([])
 	const [upHistory, setUpHistory] = useState<number[]>([])
+	const [speedSettingsInstance, setSpeedSettingsInstance] = useState<Instance | null>(null)
+	const [speedLoading, setSpeedLoading] = useState(false)
+	const [speedSaving, setSpeedSaving] = useState(false)
+	const [dlLimit, setDlLimit] = useState('0')
+	const [upLimit, setUpLimit] = useState('0')
+	const [altDlLimit, setAltDlLimit] = useState('0')
+	const [altUpLimit, setAltUpLimit] = useState('0')
+	const [schedulerEnabled, setSchedulerEnabled] = useState(false)
+	const [fromHour, setFromHour] = useState(8)
+	const [fromMin, setFromMin] = useState(0)
+	const [toHour, setToHour] = useState(20)
+	const [toMin, setToMin] = useState(0)
+	const [schedulerDays, setSchedulerDays] = useState(0)
+	const [limitUtpRate, setLimitUtpRate] = useState(true)
+	const [limitTcpOverhead, setLimitTcpOverhead] = useState(false)
+	const [limitLanPeers, setLimitLanPeers] = useState(true)
 	const { hasUpdate, latestVersion } = useUpdateCheck()
 
 	const loadInstances = useCallback(async () => {
@@ -106,6 +239,60 @@ export function InstanceManager({ username, onSelectInstance, onLogout }: Props)
 			setUpHistory(prev => [...prev.slice(-4), totalUp])
 		}
 	}, [stats])
+
+	async function openSpeedSettings(instance: Instance) {
+		setSpeedSettingsInstance(instance)
+		setSpeedLoading(true)
+		try {
+			const prefs = await getPreferences(instance.id)
+			setDlLimit(bytesToKB(prefs.dl_limit))
+			setUpLimit(bytesToKB(prefs.up_limit))
+			setAltDlLimit(bytesToKB(prefs.alt_dl_limit))
+			setAltUpLimit(bytesToKB(prefs.alt_up_limit))
+			setSchedulerEnabled(prefs.scheduler_enabled)
+			setFromHour(prefs.schedule_from_hour)
+			setFromMin(prefs.schedule_from_min)
+			setToHour(prefs.schedule_to_hour)
+			setToMin(prefs.schedule_to_min)
+			setSchedulerDays(prefs.scheduler_days)
+			setLimitUtpRate(prefs.limit_utp_rate)
+			setLimitTcpOverhead(prefs.limit_tcp_overhead)
+			setLimitLanPeers(prefs.limit_lan_peers)
+		} catch {
+			setError('Failed to load speed settings')
+			setSpeedSettingsInstance(null)
+		} finally {
+			setSpeedLoading(false)
+		}
+	}
+
+	async function handleSpeedSave() {
+		if (!speedSettingsInstance) return
+		setSpeedSaving(true)
+		try {
+			const prefs: Partial<SpeedPreferences> = {
+				dl_limit: kbToBytes(dlLimit),
+				up_limit: kbToBytes(upLimit),
+				alt_dl_limit: kbToBytes(altDlLimit),
+				alt_up_limit: kbToBytes(altUpLimit),
+				scheduler_enabled: schedulerEnabled,
+				schedule_from_hour: fromHour,
+				schedule_from_min: fromMin,
+				schedule_to_hour: toHour,
+				schedule_to_min: toMin,
+				scheduler_days: schedulerDays,
+				limit_utp_rate: limitUtpRate,
+				limit_tcp_overhead: limitTcpOverhead,
+				limit_lan_peers: limitLanPeers,
+			}
+			await setPreferences(speedSettingsInstance.id, prefs)
+			setSpeedSettingsInstance(null)
+		} catch {
+			setError('Failed to save speed settings')
+		} finally {
+			setSpeedSaving(false)
+		}
+	}
 
 	async function handleSubmit(e: React.FormEvent) {
 		e.preventDefault()
@@ -235,7 +422,8 @@ export function InstanceManager({ username, onSelectInstance, onLogout }: Props)
 		)
 	}
 
-	const displayInstances = editingId ? instances.filter(i => i.id !== editingId) : instances
+	const displayInstances = instances.filter(i => i.id !== editingId && i.id !== speedSettingsInstance?.id)
+	const showingPanel = showForm || speedSettingsInstance
 
 	return (
 		<div className="min-h-screen" style={{ backgroundColor: 'var(--bg-primary)' }}>
@@ -335,7 +523,7 @@ export function InstanceManager({ username, onSelectInstance, onLogout }: Props)
 					<SearchPanel />
 				) : (
 					<>
-				{stats.length > 0 && !showForm && (
+				{stats.length > 0 && !showingPanel && (
 					<div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
 						{[
 							{ label: 'Total', value: stats.reduce((a, s) => a + s.total, 0), color: 'var(--text-primary)' },
@@ -355,7 +543,7 @@ export function InstanceManager({ username, onSelectInstance, onLogout }: Props)
 					</div>
 				)}
 
-				{stats.length > 0 && !showForm && (
+				{stats.length > 0 && !showingPanel && (
 					<div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
 						<div className="p-4 rounded-xl border flex items-center justify-between" style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border)' }}>
 							<div className="flex items-center gap-3">
@@ -402,7 +590,7 @@ export function InstanceManager({ username, onSelectInstance, onLogout }: Props)
 
 				<div className="flex items-center justify-between mb-6">
 					<h1 className="text-xl font-semibold" style={{ color: 'var(--text-primary)' }}>Instances</h1>
-					{!showForm && (
+					{!showingPanel && (
 						<button
 							onClick={() => { setShowForm(true); setEditingId(null); setFormData({ label: '', url: '', qbt_username: '', qbt_password: '', skip_auth: false }) }}
 							className="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
@@ -537,7 +725,214 @@ export function InstanceManager({ username, onSelectInstance, onLogout }: Props)
 					</div>
 				)}
 
-				{displayInstances.length === 0 && !showForm ? (
+				{speedSettingsInstance && (
+					<div className="mb-6 p-6 rounded-xl border" style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border)' }}>
+						<div className="flex items-center justify-between mb-6">
+							<div className="flex items-center gap-3">
+								<div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'color-mix(in srgb, var(--accent) 15%, transparent)' }}>
+									<svg className="w-5 h-5" style={{ color: 'var(--accent)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+										<path strokeLinecap="round" strokeLinejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
+									</svg>
+								</div>
+								<div>
+									<h2 className="text-lg font-medium" style={{ color: 'var(--text-primary)' }}>Speed Settings</h2>
+									<p className="text-sm" style={{ color: 'var(--text-muted)' }}>{speedSettingsInstance.label}</p>
+								</div>
+							</div>
+							<span className="text-sm" style={{ color: 'var(--text-muted)' }}>0 = unlimited</span>
+						</div>
+
+						{speedLoading ? (
+							<div className="flex items-center justify-center py-8">
+								<div className="w-6 h-6 border-2 rounded-full animate-spin" style={{ borderColor: 'var(--border)', borderTopColor: 'var(--accent)' }} />
+							</div>
+						) : (
+							<div className="space-y-6">
+								<div>
+									<label className="block text-xs font-medium uppercase tracking-wider mb-3" style={{ color: 'var(--text-muted)' }}>Global Limits</label>
+									<div className="grid grid-cols-2 gap-4">
+										<div>
+											<label className="block text-xs mb-2" style={{ color: 'var(--text-muted)' }}>Download (KiB/s)</label>
+											<div className="flex items-center gap-2">
+												<svg className="w-4 h-4 shrink-0" style={{ color: 'var(--accent)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+													<path strokeLinecap="round" strokeLinejoin="round" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+												</svg>
+												<input
+													type="text"
+													inputMode="numeric"
+													value={dlLimit}
+													onChange={(e) => setDlLimit(e.target.value)}
+													className="w-full px-4 py-2.5 rounded-lg border text-sm font-mono"
+													style={{ backgroundColor: 'var(--bg-tertiary)', borderColor: 'var(--border)', color: 'var(--text-primary)' }}
+												/>
+											</div>
+										</div>
+										<div>
+											<label className="block text-xs mb-2" style={{ color: 'var(--text-muted)' }}>Upload (KiB/s)</label>
+											<div className="flex items-center gap-2">
+												<svg className="w-4 h-4 shrink-0" style={{ color: '#a6e3a1' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+													<path strokeLinecap="round" strokeLinejoin="round" d="M5 10l7-7m0 0l7 7m-7-7v18" />
+												</svg>
+												<input
+													type="text"
+													inputMode="numeric"
+													value={upLimit}
+													onChange={(e) => setUpLimit(e.target.value)}
+													className="w-full px-4 py-2.5 rounded-lg border text-sm font-mono"
+													style={{ backgroundColor: 'var(--bg-tertiary)', borderColor: 'var(--border)', color: 'var(--text-primary)' }}
+												/>
+											</div>
+										</div>
+									</div>
+								</div>
+
+								<div className="h-px" style={{ backgroundColor: 'var(--border)' }} />
+
+								<div>
+									<label className="block text-xs font-medium uppercase tracking-wider mb-3" style={{ color: 'var(--text-muted)' }}>Alternative Limits</label>
+									<div className="grid grid-cols-2 gap-4">
+										<div>
+											<label className="block text-xs mb-2" style={{ color: 'var(--text-muted)' }}>Download (KiB/s)</label>
+											<div className="flex items-center gap-2">
+												<svg className="w-4 h-4 shrink-0" style={{ color: 'var(--accent)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+													<path strokeLinecap="round" strokeLinejoin="round" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+												</svg>
+												<input
+													type="text"
+													inputMode="numeric"
+													value={altDlLimit}
+													onChange={(e) => setAltDlLimit(e.target.value)}
+													className="w-full px-4 py-2.5 rounded-lg border text-sm font-mono"
+													style={{ backgroundColor: 'var(--bg-tertiary)', borderColor: 'var(--border)', color: 'var(--text-primary)' }}
+												/>
+											</div>
+										</div>
+										<div>
+											<label className="block text-xs mb-2" style={{ color: 'var(--text-muted)' }}>Upload (KiB/s)</label>
+											<div className="flex items-center gap-2">
+												<svg className="w-4 h-4 shrink-0" style={{ color: '#a6e3a1' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+													<path strokeLinecap="round" strokeLinejoin="round" d="M5 10l7-7m0 0l7 7m-7-7v18" />
+												</svg>
+												<input
+													type="text"
+													inputMode="numeric"
+													value={altUpLimit}
+													onChange={(e) => setAltUpLimit(e.target.value)}
+													className="w-full px-4 py-2.5 rounded-lg border text-sm font-mono"
+													style={{ backgroundColor: 'var(--bg-tertiary)', borderColor: 'var(--border)', color: 'var(--text-primary)' }}
+												/>
+											</div>
+										</div>
+									</div>
+								</div>
+
+								<div className="h-px" style={{ backgroundColor: 'var(--border)' }} />
+
+								<div>
+									<div className="flex items-center justify-between mb-3">
+										<div className="flex items-center gap-3">
+											<svg
+												className="w-5 h-5"
+												style={{ color: schedulerEnabled ? 'var(--accent)' : 'var(--text-muted)' }}
+												fill="none"
+												viewBox="0 0 24 24"
+												stroke="currentColor"
+												strokeWidth={1.5}
+											>
+												<path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+											</svg>
+											<div>
+												<label className="text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Schedule</label>
+												<p className="text-xs" style={{ color: 'var(--text-muted)' }}>Auto-enable alternative limits</p>
+											</div>
+										</div>
+										<Toggle checked={schedulerEnabled} onChange={setSchedulerEnabled} />
+									</div>
+
+									{schedulerEnabled && (
+										<div className="grid grid-cols-3 gap-4 mt-4">
+											<div>
+												<label className="block text-xs mb-2" style={{ color: 'var(--text-muted)' }}>From</label>
+												<div className="flex items-center gap-1">
+													<Select
+														value={fromHour}
+														onChange={setFromHour}
+														options={Array.from({ length: 24 }, (_, i) => ({ value: i, label: i.toString().padStart(2, '0') }))}
+														className="flex-1"
+													/>
+													<span style={{ color: 'var(--text-muted)' }}>:</span>
+													<Select
+														value={fromMin}
+														onChange={setFromMin}
+														options={[0, 15, 30, 45].map(m => ({ value: m, label: m.toString().padStart(2, '0') }))}
+														className="flex-1"
+													/>
+												</div>
+											</div>
+											<div>
+												<label className="block text-xs mb-2" style={{ color: 'var(--text-muted)' }}>To</label>
+												<div className="flex items-center gap-1">
+													<Select
+														value={toHour}
+														onChange={setToHour}
+														options={Array.from({ length: 24 }, (_, i) => ({ value: i, label: i.toString().padStart(2, '0') }))}
+														className="flex-1"
+													/>
+													<span style={{ color: 'var(--text-muted)' }}>:</span>
+													<Select
+														value={toMin}
+														onChange={setToMin}
+														options={[0, 15, 30, 45].map(m => ({ value: m, label: m.toString().padStart(2, '0') }))}
+														className="flex-1"
+													/>
+												</div>
+											</div>
+											<div>
+												<label className="block text-xs mb-2" style={{ color: 'var(--text-muted)' }}>Days</label>
+												<Select
+													value={schedulerDays}
+													onChange={setSchedulerDays}
+													options={SCHEDULER_DAYS}
+												/>
+											</div>
+										</div>
+									)}
+								</div>
+
+								<div className="h-px" style={{ backgroundColor: 'var(--border)' }} />
+
+								<div>
+									<label className="block text-xs font-medium uppercase tracking-wider mb-3" style={{ color: 'var(--text-muted)' }}>Rate Limit Settings</label>
+									<div className="space-y-2">
+										<Checkbox checked={limitUtpRate} onChange={setLimitUtpRate} label="Apply rate limit to µTP protocol" />
+										<Checkbox checked={limitTcpOverhead} onChange={setLimitTcpOverhead} label="Apply rate limit to transport overhead" />
+										<Checkbox checked={limitLanPeers} onChange={setLimitLanPeers} label="Apply rate limit to peers on LAN" />
+									</div>
+								</div>
+
+								<div className="flex gap-3 pt-2">
+									<button
+										onClick={handleSpeedSave}
+										disabled={speedSaving}
+										className="px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50"
+										style={{ backgroundColor: 'var(--accent)', color: 'var(--accent-contrast)' }}
+									>
+										{speedSaving ? 'Saving...' : 'Save'}
+									</button>
+									<button
+										onClick={() => setSpeedSettingsInstance(null)}
+										className="px-4 py-2 rounded-lg text-sm border"
+										style={{ borderColor: 'var(--border)', color: 'var(--text-secondary)' }}
+									>
+										Cancel
+									</button>
+								</div>
+							</div>
+						)}
+					</div>
+				)}
+
+				{displayInstances.length === 0 && !showingPanel ? (
 					<div className="text-center py-12 rounded-xl border" style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border)' }}>
 						<p className="text-sm mb-2" style={{ color: 'var(--text-muted)' }}>No instances configured</p>
 						<p className="text-xs" style={{ color: 'var(--text-muted)' }}>Add your first qBittorrent instance to get started</p>
@@ -575,6 +970,16 @@ export function InstanceManager({ username, onSelectInstance, onLogout }: Props)
 											</div>
 										</div>
 										<div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+											<button
+												onClick={(e) => { e.stopPropagation(); openSpeedSettings(instance) }}
+												className="p-2 rounded-lg transition-colors hover:bg-[var(--bg-tertiary)]"
+												style={{ color: 'var(--text-muted)' }}
+												title="Speed settings"
+											>
+												<svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+													<path strokeLinecap="round" strokeLinejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
+												</svg>
+											</button>
 											<button
 												onClick={(e) => { e.stopPropagation(); openEdit(instance) }}
 												className="p-2 rounded-lg transition-colors hover:bg-[var(--bg-tertiary)]"
