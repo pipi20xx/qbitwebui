@@ -1,6 +1,7 @@
 import JSZip from 'jszip'
 import type { Torrent, TorrentFilter, TransferInfo, SyncMaindata } from '../types/qbittorrent'
 import type { TorrentProperties, Tracker, PeersResponse, TorrentFile, WebSeed } from '../types/torrentDetails'
+import type { QBittorrentPreferences } from '../types/preferences'
 
 function getBase(instanceId: number): string {
 	return `/api/instances/${instanceId}/qbt/v2`
@@ -278,22 +279,6 @@ export async function exportTorrents(instanceId: number, torrents: { hash: strin
 	downloadBlob(zipBlob, 'torrents.zip')
 }
 
-export interface SpeedPreferences {
-	dl_limit: number
-	up_limit: number
-	alt_dl_limit: number
-	alt_up_limit: number
-	scheduler_enabled: boolean
-	schedule_from_hour: number
-	schedule_from_min: number
-	schedule_to_hour: number
-	schedule_to_min: number
-	scheduler_days: number
-	limit_utp_rate: boolean
-	limit_tcp_overhead: boolean
-	limit_lan_peers: boolean
-}
-
 export async function getSpeedLimitsMode(instanceId: number): Promise<number> {
 	const res = await fetch(`${getBase(instanceId)}/transfer/speedLimitsMode`, { credentials: 'include' })
 	return Number(await res.text())
@@ -306,15 +291,18 @@ export async function toggleSpeedLimitsMode(instanceId: number): Promise<void> {
 	})
 }
 
-export async function getPreferences(instanceId: number): Promise<SpeedPreferences> {
-	return request<SpeedPreferences>(instanceId, '/app/preferences')
+export async function getPreferences(instanceId: number): Promise<QBittorrentPreferences> {
+	return request<QBittorrentPreferences>(instanceId, '/app/preferences')
 }
 
-export async function setPreferences(instanceId: number, prefs: Partial<SpeedPreferences>): Promise<void> {
-	await fetch(`${getBase(instanceId)}/app/setPreferences`, {
+export async function setPreferences(instanceId: number, prefs: Partial<QBittorrentPreferences>): Promise<void> {
+	const res = await fetch(`${getBase(instanceId)}/app/setPreferences`, {
 		method: 'POST',
 		credentials: 'include',
 		headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
 		body: new URLSearchParams({ json: JSON.stringify(prefs) }),
 	})
+	if (!res.ok) {
+		throw new Error(`Failed to save preferences: ${res.status}`)
+	}
 }

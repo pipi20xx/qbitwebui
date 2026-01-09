@@ -1,8 +1,8 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { getInstances, createInstance, updateInstance, deleteInstance, type Instance, type CreateInstanceData } from '../api/instances'
 import { logout, changePassword } from '../api/auth'
-import { getPreferences, setPreferences, type SpeedPreferences } from '../api/qbittorrent'
 import { ThemeSwitcher } from './ThemeSwitcher'
+import { SettingsPanel } from './SettingsPanel'
 import { SearchPanel } from './SearchPanel'
 import { FileBrowser } from './FileBrowser'
 import { OrphanManager } from './OrphanManager'
@@ -30,27 +30,6 @@ interface InstanceStats {
 	freeSpaceOnDisk: number
 }
 
-const SCHEDULER_DAYS = [
-	{ value: 0, label: 'Every day' },
-	{ value: 1, label: 'Weekdays' },
-	{ value: 2, label: 'Weekend' },
-	{ value: 3, label: 'Monday' },
-	{ value: 4, label: 'Tuesday' },
-	{ value: 5, label: 'Wednesday' },
-	{ value: 6, label: 'Thursday' },
-	{ value: 7, label: 'Friday' },
-	{ value: 8, label: 'Saturday' },
-	{ value: 9, label: 'Sunday' },
-]
-
-function bytesToKB(bytes: number): string {
-	return bytes === 0 ? '0' : Math.round(bytes / 1024).toString()
-}
-
-function kbToBytes(kb: string): number {
-	const val = parseInt(kb, 10)
-	return isNaN(val) || val < 0 ? 0 : val * 1024
-}
 
 function SpeedGraph({ history, color }: { history: number[]; color: string }) {
 	const h = 32
@@ -66,99 +45,6 @@ function SpeedGraph({ history, color }: { history: number[]; color: string }) {
 	)
 }
 
-function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
-	return (
-		<button
-			onClick={() => onChange(!checked)}
-			className="relative w-10 h-6 rounded-full transition-all duration-200 border shrink-0"
-			style={{
-				backgroundColor: checked ? 'var(--accent)' : 'var(--bg-primary)',
-				borderColor: checked ? 'var(--accent)' : 'var(--border)',
-			}}
-		>
-			<div
-				className="absolute top-0.5 w-5 h-5 rounded-full transition-all duration-200"
-				style={{
-					left: checked ? '18px' : '2px',
-					backgroundColor: checked ? 'white' : 'var(--text-muted)',
-				}}
-			/>
-		</button>
-	)
-}
-
-function Checkbox({ checked, onChange, label }: { checked: boolean; onChange: (v: boolean) => void; label: string }) {
-	return (
-		<button onClick={() => onChange(!checked)} className="flex items-center gap-3 w-full text-left">
-			<div
-				className="w-5 h-5 rounded flex items-center justify-center border transition-colors shrink-0"
-				style={{
-					backgroundColor: checked ? 'var(--accent)' : 'transparent',
-					borderColor: checked ? 'var(--accent)' : 'var(--border)',
-				}}
-			>
-				{checked && (
-					<svg className="w-3 h-3" style={{ color: 'white' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-						<path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-					</svg>
-				)}
-			</div>
-			<span className="text-sm" style={{ color: 'var(--text-secondary)' }}>{label}</span>
-		</button>
-	)
-}
-
-function Select<T extends string | number>({ value, options, onChange, className }: { value: T; options: { value: T; label: string }[]; onChange: (v: T) => void; className?: string }) {
-	const [open, setOpen] = useState(false)
-	const ref = useRef<HTMLDivElement>(null)
-
-	useEffect(() => {
-		function handleClickOutside(e: MouseEvent) {
-			if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
-		}
-		document.addEventListener('mousedown', handleClickOutside)
-		return () => document.removeEventListener('mousedown', handleClickOutside)
-	}, [])
-
-	const selected = options.find(o => o.value === value)
-
-	return (
-		<div ref={ref} className={`relative ${className || ''}`}>
-			<button
-				type="button"
-				onClick={() => setOpen(!open)}
-				className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg border text-sm"
-				style={{ backgroundColor: 'var(--bg-tertiary)', borderColor: 'var(--border)', color: 'var(--text-primary)' }}
-			>
-				<span className="font-mono">{selected?.label}</span>
-				<svg className={`w-4 h-4 transition-transform ${open ? 'rotate-180' : ''}`} style={{ color: 'var(--text-muted)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-					<path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
-				</svg>
-			</button>
-			{open && (
-				<div
-					className="absolute top-full left-0 right-0 mt-1 max-h-48 overflow-auto rounded-lg border shadow-xl z-50"
-					style={{ backgroundColor: 'var(--bg-tertiary)', borderColor: 'var(--border)' }}
-				>
-					{options.map((o) => (
-						<button
-							key={o.value}
-							type="button"
-							onClick={() => { onChange(o.value); setOpen(false) }}
-							className="w-full px-3 py-2 text-left text-sm font-mono transition-colors"
-							style={{
-								color: value === o.value ? 'var(--accent)' : 'var(--text-primary)',
-								backgroundColor: value === o.value ? 'color-mix(in srgb, var(--accent) 10%, transparent)' : 'transparent',
-							}}
-						>
-							{o.label}
-						</button>
-					))}
-				</div>
-			)}
-		</div>
-	)
-}
 
 interface Props {
 	username: string
@@ -187,22 +73,7 @@ export function InstanceManager({ username, onSelectInstance, onLogout }: Props)
 	const [changingPassword, setChangingPassword] = useState(false)
 	const [dlHistory, setDlHistory] = useState<number[]>([])
 	const [upHistory, setUpHistory] = useState<number[]>([])
-	const [speedSettingsInstance, setSpeedSettingsInstance] = useState<Instance | null>(null)
-	const [speedLoading, setSpeedLoading] = useState(false)
-	const [speedSaving, setSpeedSaving] = useState(false)
-	const [dlLimit, setDlLimit] = useState('0')
-	const [upLimit, setUpLimit] = useState('0')
-	const [altDlLimit, setAltDlLimit] = useState('0')
-	const [altUpLimit, setAltUpLimit] = useState('0')
-	const [schedulerEnabled, setSchedulerEnabled] = useState(false)
-	const [fromHour, setFromHour] = useState(8)
-	const [fromMin, setFromMin] = useState(0)
-	const [toHour, setToHour] = useState(20)
-	const [toMin, setToMin] = useState(0)
-	const [schedulerDays, setSchedulerDays] = useState(0)
-	const [limitUtpRate, setLimitUtpRate] = useState(true)
-	const [limitTcpOverhead, setLimitTcpOverhead] = useState(false)
-	const [limitLanPeers, setLimitLanPeers] = useState(true)
+	const [settingsInstance, setSettingsInstance] = useState<Instance | null>(null)
 	const [filesEnabled, setFilesEnabled] = useState(false)
 	const { hasUpdate, latestVersion } = useUpdateCheck()
 
@@ -248,60 +119,6 @@ export function InstanceManager({ username, onSelectInstance, onLogout }: Props)
 			setUpHistory(prev => [...prev.slice(-4), totalUp])
 		}
 	}, [stats])
-
-	async function openSpeedSettings(instance: Instance) {
-		setSpeedSettingsInstance(instance)
-		setSpeedLoading(true)
-		try {
-			const prefs = await getPreferences(instance.id)
-			setDlLimit(bytesToKB(prefs.dl_limit))
-			setUpLimit(bytesToKB(prefs.up_limit))
-			setAltDlLimit(bytesToKB(prefs.alt_dl_limit))
-			setAltUpLimit(bytesToKB(prefs.alt_up_limit))
-			setSchedulerEnabled(prefs.scheduler_enabled)
-			setFromHour(prefs.schedule_from_hour)
-			setFromMin(prefs.schedule_from_min)
-			setToHour(prefs.schedule_to_hour)
-			setToMin(prefs.schedule_to_min)
-			setSchedulerDays(prefs.scheduler_days)
-			setLimitUtpRate(prefs.limit_utp_rate)
-			setLimitTcpOverhead(prefs.limit_tcp_overhead)
-			setLimitLanPeers(prefs.limit_lan_peers)
-		} catch {
-			setError('Failed to load speed settings')
-			setSpeedSettingsInstance(null)
-		} finally {
-			setSpeedLoading(false)
-		}
-	}
-
-	async function handleSpeedSave() {
-		if (!speedSettingsInstance) return
-		setSpeedSaving(true)
-		try {
-			const prefs: Partial<SpeedPreferences> = {
-				dl_limit: kbToBytes(dlLimit),
-				up_limit: kbToBytes(upLimit),
-				alt_dl_limit: kbToBytes(altDlLimit),
-				alt_up_limit: kbToBytes(altUpLimit),
-				scheduler_enabled: schedulerEnabled,
-				schedule_from_hour: fromHour,
-				schedule_from_min: fromMin,
-				schedule_to_hour: toHour,
-				schedule_to_min: toMin,
-				scheduler_days: schedulerDays,
-				limit_utp_rate: limitUtpRate,
-				limit_tcp_overhead: limitTcpOverhead,
-				limit_lan_peers: limitLanPeers,
-			}
-			await setPreferences(speedSettingsInstance.id, prefs)
-			setSpeedSettingsInstance(null)
-		} catch {
-			setError('Failed to save speed settings')
-		} finally {
-			setSpeedSaving(false)
-		}
-	}
 
 	async function handleSubmit(e: React.FormEvent) {
 		e.preventDefault()
@@ -431,8 +248,8 @@ export function InstanceManager({ username, onSelectInstance, onLogout }: Props)
 		)
 	}
 
-	const displayInstances = instances.filter(i => i.id !== editingId && i.id !== speedSettingsInstance?.id)
-	const showingPanel = showForm || speedSettingsInstance
+	const displayInstances = instances.filter(i => i.id !== editingId && i.id !== settingsInstance?.id)
+	const showingPanel = showForm || settingsInstance
 
 	return (
 		<div className="min-h-screen" style={{ backgroundColor: 'var(--bg-primary)' }}>
@@ -817,211 +634,8 @@ export function InstanceManager({ username, onSelectInstance, onLogout }: Props)
 					</div>
 				)}
 
-				{speedSettingsInstance && (
-					<div className="mb-6 p-6 rounded-xl border" style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border)' }}>
-						<div className="flex items-center justify-between mb-6">
-							<div className="flex items-center gap-3">
-								<div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'color-mix(in srgb, var(--accent) 15%, transparent)' }}>
-									<svg className="w-5 h-5" style={{ color: 'var(--accent)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-										<path strokeLinecap="round" strokeLinejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
-									</svg>
-								</div>
-								<div>
-									<h2 className="text-lg font-medium" style={{ color: 'var(--text-primary)' }}>Speed Settings</h2>
-									<p className="text-sm" style={{ color: 'var(--text-muted)' }}>{speedSettingsInstance.label}</p>
-								</div>
-							</div>
-							<span className="text-sm" style={{ color: 'var(--text-muted)' }}>0 = unlimited</span>
-						</div>
-
-						{speedLoading ? (
-							<div className="flex items-center justify-center py-8">
-								<div className="w-6 h-6 border-2 rounded-full animate-spin" style={{ borderColor: 'var(--border)', borderTopColor: 'var(--accent)' }} />
-							</div>
-						) : (
-							<div className="space-y-6">
-								<div>
-									<label className="block text-xs font-medium uppercase tracking-wider mb-3" style={{ color: 'var(--text-muted)' }}>Global Limits</label>
-									<div className="grid grid-cols-2 gap-4">
-										<div>
-											<label className="block text-xs mb-2" style={{ color: 'var(--text-muted)' }}>Download (KiB/s)</label>
-											<div className="flex items-center gap-2">
-												<svg className="w-4 h-4 shrink-0" style={{ color: 'var(--accent)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-													<path strokeLinecap="round" strokeLinejoin="round" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
-												</svg>
-												<input
-													type="text"
-													inputMode="numeric"
-													value={dlLimit}
-													onChange={(e) => setDlLimit(e.target.value)}
-													className="w-full px-4 py-2.5 rounded-lg border text-sm font-mono"
-													style={{ backgroundColor: 'var(--bg-tertiary)', borderColor: 'var(--border)', color: 'var(--text-primary)' }}
-												/>
-											</div>
-										</div>
-										<div>
-											<label className="block text-xs mb-2" style={{ color: 'var(--text-muted)' }}>Upload (KiB/s)</label>
-											<div className="flex items-center gap-2">
-												<svg className="w-4 h-4 shrink-0" style={{ color: '#a6e3a1' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-													<path strokeLinecap="round" strokeLinejoin="round" d="M5 10l7-7m0 0l7 7m-7-7v18" />
-												</svg>
-												<input
-													type="text"
-													inputMode="numeric"
-													value={upLimit}
-													onChange={(e) => setUpLimit(e.target.value)}
-													className="w-full px-4 py-2.5 rounded-lg border text-sm font-mono"
-													style={{ backgroundColor: 'var(--bg-tertiary)', borderColor: 'var(--border)', color: 'var(--text-primary)' }}
-												/>
-											</div>
-										</div>
-									</div>
-								</div>
-
-								<div className="h-px" style={{ backgroundColor: 'var(--border)' }} />
-
-								<div>
-									<label className="block text-xs font-medium uppercase tracking-wider mb-3" style={{ color: 'var(--text-muted)' }}>Alternative Limits</label>
-									<div className="grid grid-cols-2 gap-4">
-										<div>
-											<label className="block text-xs mb-2" style={{ color: 'var(--text-muted)' }}>Download (KiB/s)</label>
-											<div className="flex items-center gap-2">
-												<svg className="w-4 h-4 shrink-0" style={{ color: 'var(--accent)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-													<path strokeLinecap="round" strokeLinejoin="round" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
-												</svg>
-												<input
-													type="text"
-													inputMode="numeric"
-													value={altDlLimit}
-													onChange={(e) => setAltDlLimit(e.target.value)}
-													className="w-full px-4 py-2.5 rounded-lg border text-sm font-mono"
-													style={{ backgroundColor: 'var(--bg-tertiary)', borderColor: 'var(--border)', color: 'var(--text-primary)' }}
-												/>
-											</div>
-										</div>
-										<div>
-											<label className="block text-xs mb-2" style={{ color: 'var(--text-muted)' }}>Upload (KiB/s)</label>
-											<div className="flex items-center gap-2">
-												<svg className="w-4 h-4 shrink-0" style={{ color: '#a6e3a1' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-													<path strokeLinecap="round" strokeLinejoin="round" d="M5 10l7-7m0 0l7 7m-7-7v18" />
-												</svg>
-												<input
-													type="text"
-													inputMode="numeric"
-													value={altUpLimit}
-													onChange={(e) => setAltUpLimit(e.target.value)}
-													className="w-full px-4 py-2.5 rounded-lg border text-sm font-mono"
-													style={{ backgroundColor: 'var(--bg-tertiary)', borderColor: 'var(--border)', color: 'var(--text-primary)' }}
-												/>
-											</div>
-										</div>
-									</div>
-								</div>
-
-								<div className="h-px" style={{ backgroundColor: 'var(--border)' }} />
-
-								<div>
-									<div className="flex items-center justify-between mb-3">
-										<div className="flex items-center gap-3">
-											<svg
-												className="w-5 h-5"
-												style={{ color: schedulerEnabled ? 'var(--accent)' : 'var(--text-muted)' }}
-												fill="none"
-												viewBox="0 0 24 24"
-												stroke="currentColor"
-												strokeWidth={1.5}
-											>
-												<path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-											</svg>
-											<div>
-												<label className="text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Schedule</label>
-												<p className="text-xs" style={{ color: 'var(--text-muted)' }}>Auto-enable alternative limits</p>
-											</div>
-										</div>
-										<Toggle checked={schedulerEnabled} onChange={setSchedulerEnabled} />
-									</div>
-
-									{schedulerEnabled && (
-										<div className="grid grid-cols-3 gap-4 mt-4">
-											<div>
-												<label className="block text-xs mb-2" style={{ color: 'var(--text-muted)' }}>From</label>
-												<div className="flex items-center gap-1">
-													<Select
-														value={fromHour}
-														onChange={setFromHour}
-														options={Array.from({ length: 24 }, (_, i) => ({ value: i, label: i.toString().padStart(2, '0') }))}
-														className="flex-1"
-													/>
-													<span style={{ color: 'var(--text-muted)' }}>:</span>
-													<Select
-														value={fromMin}
-														onChange={setFromMin}
-														options={[0, 15, 30, 45].map(m => ({ value: m, label: m.toString().padStart(2, '0') }))}
-														className="flex-1"
-													/>
-												</div>
-											</div>
-											<div>
-												<label className="block text-xs mb-2" style={{ color: 'var(--text-muted)' }}>To</label>
-												<div className="flex items-center gap-1">
-													<Select
-														value={toHour}
-														onChange={setToHour}
-														options={Array.from({ length: 24 }, (_, i) => ({ value: i, label: i.toString().padStart(2, '0') }))}
-														className="flex-1"
-													/>
-													<span style={{ color: 'var(--text-muted)' }}>:</span>
-													<Select
-														value={toMin}
-														onChange={setToMin}
-														options={[0, 15, 30, 45].map(m => ({ value: m, label: m.toString().padStart(2, '0') }))}
-														className="flex-1"
-													/>
-												</div>
-											</div>
-											<div>
-												<label className="block text-xs mb-2" style={{ color: 'var(--text-muted)' }}>Days</label>
-												<Select
-													value={schedulerDays}
-													onChange={setSchedulerDays}
-													options={SCHEDULER_DAYS}
-												/>
-											</div>
-										</div>
-									)}
-								</div>
-
-								<div className="h-px" style={{ backgroundColor: 'var(--border)' }} />
-
-								<div>
-									<label className="block text-xs font-medium uppercase tracking-wider mb-3" style={{ color: 'var(--text-muted)' }}>Rate Limit Settings</label>
-									<div className="space-y-2">
-										<Checkbox checked={limitUtpRate} onChange={setLimitUtpRate} label="Apply rate limit to µTP protocol" />
-										<Checkbox checked={limitTcpOverhead} onChange={setLimitTcpOverhead} label="Apply rate limit to transport overhead" />
-										<Checkbox checked={limitLanPeers} onChange={setLimitLanPeers} label="Apply rate limit to peers on LAN" />
-									</div>
-								</div>
-
-								<div className="flex gap-3 pt-2">
-									<button
-										onClick={handleSpeedSave}
-										disabled={speedSaving}
-										className="px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50"
-										style={{ backgroundColor: 'var(--accent)', color: 'var(--accent-contrast)' }}
-									>
-										{speedSaving ? 'Saving...' : 'Save'}
-									</button>
-									<button
-										onClick={() => setSpeedSettingsInstance(null)}
-										className="px-4 py-2 rounded-lg text-sm border"
-										style={{ borderColor: 'var(--border)', color: 'var(--text-secondary)' }}
-									>
-										Cancel
-									</button>
-								</div>
-							</div>
-						)}
-					</div>
+				{settingsInstance && (
+					<SettingsPanel instance={settingsInstance} onClose={() => setSettingsInstance(null)} />
 				)}
 
 				{displayInstances.length === 0 && !showingPanel ? (
@@ -1063,13 +677,14 @@ export function InstanceManager({ username, onSelectInstance, onLogout }: Props)
 										</div>
 										<div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
 											<button
-												onClick={(e) => { e.stopPropagation(); openSpeedSettings(instance) }}
+												onClick={(e) => { e.stopPropagation(); setSettingsInstance(instance) }}
 												className="p-2 rounded-lg transition-colors hover:bg-[var(--bg-tertiary)]"
 												style={{ color: 'var(--text-muted)' }}
-												title="Speed settings"
+												title="Settings"
 											>
 												<svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-													<path strokeLinecap="round" strokeLinejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
+													<path strokeLinecap="round" strokeLinejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 0 1 1.37.49l1.296 2.247a1.125 1.125 0 0 1-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a7.723 7.723 0 0 1 0 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 0 1-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 0 1-.22.128c-.331.183-.581.495-.644.869l-.213 1.281c-.09.543-.56.94-1.11.94h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 0 1-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 0 1-1.369-.49l-1.297-2.247a1.125 1.125 0 0 1 .26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 0 1 0-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 0 1-.26-1.43l1.297-2.247a1.125 1.125 0 0 1 1.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l.214-1.28Z" />
+													<path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
 												</svg>
 											</button>
 											<button

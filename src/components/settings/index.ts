@@ -1,0 +1,8 @@
+export { BehaviorTab } from './BehaviorTab'
+export { DownloadsTab } from './DownloadsTab'
+export { ConnectionTab } from './ConnectionTab'
+export { SpeedTab } from './SpeedTab'
+export { BitTorrentTab } from './BitTorrentTab'
+export { RSSTab } from './RSSTab'
+export { WebUITab } from './WebUITab'
+export { AdvancedTab } from './AdvancedTab'
