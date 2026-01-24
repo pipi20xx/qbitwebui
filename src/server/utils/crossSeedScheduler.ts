@@ -41,6 +41,12 @@ function calculateNextRun(lastRun: number | null, intervalHours: number): number
 	return nextRun <= now ? now + 60 : nextRun
 }
 
+function scheduleNextRun(instanceId: number, userId: number, intervalHours: number): void {
+	const nextRun = calculateNextRun(Math.floor(Date.now() / 1000), intervalHours)
+	db.run('UPDATE cross_seed_config SET next_run = ? WHERE instance_id = ?', [nextRun, instanceId])
+	scheduleInstance(instanceId, userId, nextRun)
+}
+
 async function runScheduledScan(instanceId: number): Promise<void> {
 	const scheduled = scheduledInstances.get(instanceId)
 	if (!scheduled || runningScans.has(instanceId)) {
@@ -80,9 +86,7 @@ async function runScheduledScan(instanceId: number): Promise<void> {
 			)
 		}
 	} finally {
-		const nextRun = calculateNextRun(Math.floor(Date.now() / 1000), config.interval_hours)
-		db.run('UPDATE cross_seed_config SET next_run = ? WHERE instance_id = ?', [nextRun, instanceId])
-		scheduleInstance(instanceId, scheduled.userId, nextRun)
+		scheduleNextRun(instanceId, scheduled.userId, config.interval_hours)
 		runningScans.delete(instanceId)
 		abortControllers.delete(instanceId)
 		scheduled.running = false
@@ -237,20 +241,25 @@ export async function triggerManualScan(
 			.get(instanceId)
 
 		if (config) {
-			const nextRun = calculateNextRun(Math.floor(Date.now() / 1000), config.interval_hours)
-			db.run('UPDATE cross_seed_config SET next_run = ? WHERE instance_id = ?', [nextRun, instanceId])
-			scheduleInstance(instanceId, userId, nextRun)
-		}
+		scheduleNextRun(instanceId, userId, config.interval_hours)
+	}
 
-		return result
-	} catch (e) {
-		if (e instanceof Error && e.name === 'AbortError') {
-			log.info(`[CrossSeed] Scan stopped for instance ${instanceId}`)
-			throw new Error('Scan stopped')
+	return result
+} catch (e) {
+	if (e instanceof Error && e.name === 'AbortError') {
+		log.info(`[CrossSeed] Scan stopped for instance ${instanceId}`)
+		const config = db
+			.query<CrossSeedConfig, [number]>('SELECT * FROM cross_seed_config WHERE instance_id = ? AND enabled = 1')
+			.get(instanceId)
+
+		if (config) {
+			scheduleNextRun(instanceId, userId, config.interval_hours)
 		}
-		throw e
-	} finally {
-		runningScans.delete(instanceId)
+		throw new Error('Scan stopped')
+	}
+	throw e
+} finally {
+	runningScans.delete(instanceId)
 		abortControllers.delete(instanceId)
 		if (scheduled) {
 			scheduled.running = false
@@ -301,6 +310,13 @@ export function stopScan(instanceId: number): boolean {
 	const controller = abortControllers.get(instanceId)
 	if (controller) {
 		controller.abort()
+		const config = db
+			.query<CrossSeedConfig, [number]>('SELECT * FROM cross_seed_config WHERE instance_id = ? AND enabled = 1')
+			.get(instanceId)
+		const userId = getInstanceUserId(instanceId)
+		if (config && userId) {
+			scheduleNextRun(instanceId, userId, config.interval_hours)
+		}
 		log.info(`[CrossSeed] Stop requested for instance ${instanceId}`)
 		return true
 	}
