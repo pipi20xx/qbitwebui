@@ -19,6 +19,47 @@ const AddTorrentModal = lazy(() =>
 )
 
 type MainTab = 'torrents' | 'tools'
+type Tool = 'search' | 'files' | 'orphans' | 'rss' | 'logs' | 'cross-seed' | 'statistics' | null
+
+const toolUrlMap: Record<string, Tool> = {
+	indexers: 'search',
+	search: 'search',
+	files: 'files',
+	orphans: 'orphans',
+	rss: 'rss',
+	logs: 'logs',
+	'cross-seed': 'cross-seed',
+	statistics: 'statistics',
+}
+
+const toolToUrl: Record<NonNullable<Tool>, string> = {
+	search: 'indexers',
+	files: 'files',
+	orphans: 'orphans',
+	rss: 'rss',
+	logs: 'logs',
+	'cross-seed': 'cross-seed',
+	statistics: 'statistics',
+}
+
+function parseHash(): { tab: MainTab; tool: Tool } {
+	const hash = window.location.hash.slice(1)
+	if (hash === 'tools') return { tab: 'tools', tool: null }
+	if (hash.startsWith('tools/')) {
+		const toolName = hash.slice(6)
+		const tool = toolUrlMap[toolName] ?? null
+		return { tab: 'tools', tool }
+	}
+	return { tab: 'torrents', tool: null }
+}
+
+function setHash(tab: MainTab, tool: Tool) {
+	if (tab === 'tools') {
+		window.location.hash = tool ? `tools/${toolToUrl[tool]}` : 'tools'
+	} else {
+		window.location.hash = ''
+	}
+}
 
 function useAltSpeedMode(instanceId: number | null) {
 	const [enabled, setEnabled] = useState(false)
@@ -75,12 +116,38 @@ export function MobileApp({ username, onLogout, authDisabled }: Props) {
 	const [showUserMenu, setShowUserMenu] = useState(false)
 	const [search, setSearch] = useState('')
 	const [searchFocused, setSearchFocused] = useState(false)
-	const [mainTab, setMainTab] = useState<MainTab>('torrents')
+	const [mainTab, setMainTab] = useState<MainTab>(() => parseHash().tab)
+	const [activeTool, setActiveTool] = useState<Tool>(() => parseHash().tool)
 	const [compactMode, setCompactMode] = useState(() => localStorage.getItem('mobileCompactMode') === 'true')
 	const [showAddModal, setShowAddModal] = useState(false)
 	const searchInputRef = useRef<HTMLInputElement>(null)
 	const effectiveInstance = selectedInstance !== 'all' ? selectedInstance : instances.length === 1 ? instances[0] : null
 	const altSpeed = useAltSpeedMode(effectiveInstance?.id ?? null)
+
+	const handleMainTabChange = useCallback((tab: MainTab) => {
+		setMainTab(tab)
+		if (tab === 'torrents') {
+			setActiveTool(null)
+			setHash(tab, null)
+		} else {
+			setHash(tab, activeTool)
+		}
+	}, [activeTool])
+
+	const handleToolChange = useCallback((tool: Tool) => {
+		setActiveTool(tool)
+		setHash('tools', tool)
+	}, [])
+
+	useEffect(() => {
+		function handleHashChange() {
+			const { tab, tool } = parseHash()
+			setMainTab(tab)
+			setActiveTool(tool)
+		}
+		window.addEventListener('hashchange', handleHashChange)
+		return () => window.removeEventListener('hashchange', handleHashChange)
+	}, [])
 
 	const toggleCompactMode = useCallback(() => {
 		setCompactMode((prev) => {
@@ -307,7 +374,7 @@ export function MobileApp({ username, onLogout, authDisabled }: Props) {
 					)}
 					{mainTab === 'tools' && (
 						<Suspense fallback={null}>
-							<MobileTools instances={instances} />
+							<MobileTools instances={instances} activeTool={activeTool} onToolChange={handleToolChange} />
 						</Suspense>
 					)}
 				</main>
@@ -322,7 +389,7 @@ export function MobileApp({ username, onLogout, authDisabled }: Props) {
 				>
 					<div className="flex">
 						<button
-							onClick={() => setMainTab('torrents')}
+							onClick={() => handleMainTabChange('torrents')}
 							className="flex-1 flex flex-col items-center gap-1 py-3 transition-colors"
 							style={{ color: mainTab === 'torrents' ? 'var(--accent)' : 'var(--text-muted)' }}
 						>
@@ -338,7 +405,7 @@ export function MobileApp({ username, onLogout, authDisabled }: Props) {
 							<span className="text-xs font-medium">Add</span>
 						</button>
 						<button
-							onClick={() => setMainTab('tools')}
+							onClick={() => handleMainTabChange('tools')}
 							className="flex-1 flex flex-col items-center gap-1 py-3 transition-colors"
 							style={{ color: mainTab === 'tools' ? 'var(--accent)' : 'var(--text-muted)' }}
 						>

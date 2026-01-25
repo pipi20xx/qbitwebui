@@ -31,10 +31,11 @@ function LazyTool({ children }: { children: ReactNode }): ReactNode {
 
 interface Props {
 	instances: Instance[]
+	activeTool: Tool
+	onToolChange: (tool: Tool) => void
 }
 
-export function MobileTools({ instances }: Props): ReactNode {
-	const [activeTool, setActiveTool] = useState<Tool>(null)
+export function MobileTools({ instances, activeTool, onToolChange }: Props): ReactNode {
 	const [filesEnabled, setFilesEnabled] = useState(false)
 
 	useEffect(() => {
@@ -44,7 +45,7 @@ export function MobileTools({ instances }: Props): ReactNode {
 			.catch(() => {})
 	}, [])
 
-	const handleBack = () => setActiveTool(null)
+	const handleBack = () => onToolChange(null)
 
 	switch (activeTool) {
 		case 'search':
@@ -94,7 +95,7 @@ export function MobileTools({ instances }: Props): ReactNode {
 	return (
 		<div className="p-4 space-y-3">
 			<button
-				onClick={() => setActiveTool('search')}
+				onClick={() => onToolChange('search')}
 				className="w-full p-4 rounded-2xl border text-left active:scale-[0.98] transition-transform"
 				style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border)' }}
 			>
@@ -119,7 +120,7 @@ export function MobileTools({ instances }: Props): ReactNode {
 
 			{filesEnabled && (
 				<button
-					onClick={() => setActiveTool('files')}
+					onClick={() => onToolChange('files')}
 					className="w-full p-4 rounded-2xl border text-left active:scale-[0.98] transition-transform"
 					style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border)' }}
 				>
@@ -144,7 +145,7 @@ export function MobileTools({ instances }: Props): ReactNode {
 			)}
 
 			<button
-				onClick={() => setActiveTool('orphans')}
+				onClick={() => onToolChange('orphans')}
 				className="w-full p-4 rounded-2xl border text-left active:scale-[0.98] transition-transform"
 				style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border)' }}
 			>
@@ -168,7 +169,7 @@ export function MobileTools({ instances }: Props): ReactNode {
 			</button>
 
 			<button
-				onClick={() => setActiveTool('rss')}
+				onClick={() => onToolChange('rss')}
 				className="w-full p-4 rounded-2xl border text-left active:scale-[0.98] transition-transform"
 				style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border)' }}
 			>
@@ -192,7 +193,7 @@ export function MobileTools({ instances }: Props): ReactNode {
 			</button>
 
 			<button
-				onClick={() => setActiveTool('logs')}
+				onClick={() => onToolChange('logs')}
 				className="w-full p-4 rounded-2xl border text-left active:scale-[0.98] transition-transform"
 				style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border)' }}
 			>
@@ -216,7 +217,7 @@ export function MobileTools({ instances }: Props): ReactNode {
 			</button>
 
 			<button
-				onClick={() => setActiveTool('cross-seed')}
+				onClick={() => onToolChange('cross-seed')}
 				className="w-full p-4 rounded-2xl border text-left active:scale-[0.98] transition-transform relative"
 				style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border)' }}
 			>
@@ -243,7 +244,7 @@ export function MobileTools({ instances }: Props): ReactNode {
 			</button>
 
 			<button
-				onClick={() => setActiveTool('statistics')}
+				onClick={() => onToolChange('statistics')}
 				className="w-full p-4 rounded-2xl border text-left active:scale-[0.98] transition-transform"
 				style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border)' }}
 			>

@@ -83,6 +83,8 @@ interface Props {
 	onLogout: () => void
 	authDisabled?: boolean
 	initialTab?: Tab
+	initialTool?: Tool
+	onToolChange?: (tool: Tool) => void
 }
 
 export function InstanceManager({
@@ -91,9 +93,10 @@ export function InstanceManager({
 	onLogout,
 	authDisabled,
 	initialTab = 'dashboard',
+	initialTool = null,
+	onToolChange,
 }: Props) {
 	const [tab, setTab] = useState<Tab>(initialTab)
-	const [activeTool, setActiveTool] = useState<Tool>(null)
 	const [instances, setInstances] = useState<Instance[]>([])
 	const [stats, setStats] = useState<InstanceStats[]>([])
 	const [loading, setLoading] = useState(true)
@@ -328,7 +331,7 @@ export function InstanceManager({
 				activeTab={tab}
 				onTabChange={(t) => {
 					setTab(t)
-					setActiveTool(null)
+					onToolChange(null)
 				}}
 				username={username}
 				authDisabled={authDisabled}
@@ -338,23 +341,23 @@ export function InstanceManager({
 
 			<main className="max-w-6xl mx-auto p-6">
 				{tab === 'tools' ? (
-					activeTool ? (
+					initialTool ? (
 						<>
 							<button
-								onClick={() => setActiveTool(null)}
+								onClick={() => onToolChange(null)}
 								className="flex items-center gap-2 mb-6 text-sm hover:underline"
 								style={{ color: 'var(--text-muted)' }}
 							>
 								<ChevronLeft className="w-4 h-4" strokeWidth={2} />
 								Back to Tools
 							</button>
-							{activeTool === 'indexers' && <SearchPanel />}
-							{activeTool === 'files' && <FileBrowser />}
-							{activeTool === 'orphans' && <OrphanManager instances={instances} />}
-							{activeTool === 'rss' && <RSSManager instances={instances} />}
-							{activeTool === 'logs' && <LogViewer instances={instances} />}
-							{activeTool === 'cross-seed' && <CrossSeedManager instances={instances} />}
-							{activeTool === 'statistics' && <Statistics />}
+							{initialTool === 'indexers' && <SearchPanel />}
+							{initialTool === 'files' && <FileBrowser />}
+							{initialTool === 'orphans' && <OrphanManager instances={instances} />}
+							{initialTool === 'rss' && <RSSManager instances={instances} />}
+							{initialTool === 'logs' && <LogViewer instances={instances} />}
+							{initialTool === 'cross-seed' && <CrossSeedManager instances={instances} />}
+							{initialTool === 'statistics' && <Statistics />}
 						</>
 					) : (
 						<>
@@ -363,7 +366,7 @@ export function InstanceManager({
 							</h1>
 							<div className="grid grid-cols-2 md:grid-cols-3 gap-4">
 								<button
-									onClick={() => setActiveTool('indexers')}
+									onClick={() => onToolChange('indexers')}
 									className="p-6 rounded-xl border text-left transition-all hover:border-[var(--accent)]"
 									style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border)' }}
 								>
@@ -377,7 +380,7 @@ export function InstanceManager({
 								</button>
 								{filesEnabled && (
 									<button
-										onClick={() => setActiveTool('files')}
+										onClick={() => onToolChange('files')}
 										className="p-6 rounded-xl border text-left transition-all hover:border-[var(--accent)]"
 										style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border)' }}
 									>
@@ -391,7 +394,7 @@ export function InstanceManager({
 									</button>
 								)}
 								<button
-									onClick={() => setActiveTool('orphans')}
+									onClick={() => onToolChange('orphans')}
 									className="p-6 rounded-xl border text-left transition-all hover:border-[var(--accent)]"
 									style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border)' }}
 								>
@@ -404,7 +407,7 @@ export function InstanceManager({
 									</div>
 								</button>
 								<button
-									onClick={() => setActiveTool('rss')}
+									onClick={() => onToolChange('rss')}
 									className="p-6 rounded-xl border text-left transition-all hover:border-[var(--accent)]"
 									style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border)' }}
 								>
@@ -417,7 +420,7 @@ export function InstanceManager({
 									</div>
 								</button>
 								<button
-									onClick={() => setActiveTool('logs')}
+									onClick={() => onToolChange('logs')}
 									className="p-6 rounded-xl border text-left transition-all hover:border-[var(--accent)]"
 									style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border)' }}
 								>
@@ -430,7 +433,7 @@ export function InstanceManager({
 									</div>
 								</button>
 								<button
-									onClick={() => setActiveTool('cross-seed')}
+									onClick={() => onToolChange('cross-seed')}
 									className="p-6 rounded-xl border text-left transition-all hover:border-[var(--accent)] relative"
 									style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border)' }}
 								>
@@ -446,7 +449,7 @@ export function InstanceManager({
 									</div>
 								</button>
 								<button
-									onClick={() => setActiveTool('statistics')}
+									onClick={() => onToolChange('statistics')}
 									className="p-6 rounded-xl border text-left transition-all hover:border-[var(--accent)]"
 									style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border)' }}
 								>

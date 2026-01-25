@@ -25,22 +25,31 @@ const isMobile = () => window.innerWidth < 768
 
 type View = 'loading' | 'auth' | 'instances' | 'torrents' | 'mobile'
 type Tab = 'dashboard' | 'tools'
+type Tool = 'indexers' | 'files' | 'orphans' | 'rss' | 'logs' | 'cross-seed' | 'statistics' | null
 
-function parseHash(): { tab: Tab; instanceId: number | null } {
+function parseHash(): { tab: Tab; instanceId: number | null; tool: Tool } {
 	const hash = window.location.hash.slice(1)
-	if (hash === 'tools') return { tab: 'tools', instanceId: null }
+	if (hash === 'tools') return { tab: 'tools', instanceId: null, tool: null }
+	if (hash.startsWith('tools/')) {
+		const toolName = hash.slice(6) as Tool
+		const validTools: Tool[] = ['indexers', 'files', 'orphans', 'rss', 'logs', 'cross-seed', 'statistics']
+		if (validTools.includes(toolName)) {
+			return { tab: 'tools', instanceId: null, tool: toolName }
+		}
+		return { tab: 'tools', instanceId: null, tool: null }
+	}
 	if (hash.startsWith('instance/')) {
 		const id = parseInt(hash.slice(9), 10)
-		if (!isNaN(id)) return { tab: 'dashboard', instanceId: id }
+		if (!isNaN(id)) return { tab: 'dashboard', instanceId: id, tool: null }
 	}
-	return { tab: 'dashboard', instanceId: null }
+	return { tab: 'dashboard', instanceId: null, tool: null }
 }
 
-function setHash(tab: Tab, instanceId: number | null) {
+function setHash(tab: Tab, instanceId: number | null, tool?: Tool) {
 	if (instanceId) {
 		window.location.hash = `instance/${instanceId}`
 	} else if (tab === 'tools') {
-		window.location.hash = 'tools'
+		window.location.hash = tool ? `tools/${tool}` : 'tools'
 	} else {
 		window.location.hash = ''
 	}
@@ -52,11 +61,13 @@ export default function App() {
 	const [currentInstance, setCurrentInstance] = useState<Instance | null>(null)
 	const [authDisabled, setAuthDisabled] = useState(false)
 	const [initialTab, setInitialTab] = useState<Tab>('dashboard')
+	const [initialTool, setInitialTool] = useState<Tool>(null)
 
 	const applyRoute = useCallback(async (authenticated: boolean) => {
 		if (!authenticated) return
-		const { tab, instanceId } = parseHash()
+		const { tab, instanceId, tool } = parseHash()
 		setInitialTab(tab)
+		setInitialTool(tool)
 		if (instanceId) {
 			const instances = await getInstances().catch(() => [])
 			const instance = instances.find((i) => i.id === instanceId)
@@ -106,8 +117,9 @@ export default function App() {
 
 	useEffect(() => {
 		function handleHashChange() {
-			const { tab, instanceId } = parseHash()
+			const { tab, instanceId, tool } = parseHash()
 			setInitialTab(tab)
+			setInitialTool(tool)
 			if (instanceId && currentInstance?.id !== instanceId) {
 				getInstances()
 					.then((instances) => {
@@ -143,8 +155,14 @@ export default function App() {
 	function goToTab(tab: Tab) {
 		setCurrentInstance(null)
 		setInitialTab(tab)
+		setInitialTool(null)
 		setView('instances')
 		setHash(tab, null)
+	}
+
+	function handleToolChange(tool: Tool) {
+		setInitialTool(tool)
+		setHash('tools', null, tool)
 	}
 
 	if (view === 'loading') {
@@ -214,6 +232,8 @@ export default function App() {
 						}}
 						authDisabled={authDisabled}
 						initialTab={initialTab}
+						initialTool={initialTool}
+						onToolChange={handleToolChange}
 					/>
 				</QueryClientProvider>
 			</ThemeProvider>
