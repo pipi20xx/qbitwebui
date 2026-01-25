@@ -84,7 +84,7 @@ interface Props {
 	authDisabled?: boolean
 	initialTab?: Tab
 	initialTool?: Tool
-	onToolChange?: (tool: Tool) => void
+	onToolChange: (tool: Tool) => void
 }
 
 export function InstanceManager({
