@@ -16,19 +16,7 @@ Built with [React](https://react.dev/), [Hono](https://hono.dev/), and [Bun](htt
 
 <div align="center">
 <img width="800" alt="main" src="https://github.com/user-attachments/assets/64ae19ea-9029-442c-97dd-958af04e21d1" />
-<img width="800" alt="torrents-view" src="https://github.com/user-attachments/assets/f0be4014-8ca5-4ac5-b3be-b0b75a0e2df8" />
-
 </div>
-
-<details>
-<summary><h3>Themes</h3></summary>
-<div align="center">
-<img width="800" height="1730" alt="theme-catppuccin" src="https://github.com/user-attachments/assets/2982522e-789d-400b-9a9f-08f9277fb491" />
-<img width="800" height="1730" alt="theme-gruvbox" src="https://github.com/user-attachments/assets/e8dce4d7-c9f5-41dc-af91-b6d8683ae50f" />
-<img width="800" height="1730" alt="theme-dracula" src="https://github.com/user-attachments/assets/a0c52d40-c960-48dd-93c2-76f194612150" />
-<img width="800" height="1730" alt="theme-nord" src="https://github.com/user-attachments/assets/e5960f2a-fd01-4656-b9e0-c72a4af0b328" />
-</div>
-</details>
 
 <details>
 <summary><h3>Mobile UI</h3></summary>
@@ -44,6 +32,8 @@ Built with [React](https://react.dev/), [Hono](https://hono.dev/), and [Bun](htt
 
 ## Features
 
+See [features section](https://maciejonos.github.io/qbitwebui/guide/features) for more details.
+
 - **Multi-instance** - Manage multiple qBittorrent instances from one dashboard
 - **Cross seed** - Automatic cross seed directly in qbitwebui. (experimental)
 - **Instance statistics** - Overview of all instances with status, speeds, torrent counts
@@ -56,7 +46,7 @@ Built with [React](https://react.dev/), [Hono](https://hono.dev/), and [Bun](htt
 - **Themes** - Multiple color themes included
 - **File browser** - Browse and download files from your downloads directory
 - **RSS management** - Define rules, add RSS feeds, manage folders
-- **Network agent** - Speedtest, IP check, DNS diagnostics from qBittorrent's network - check how to set up [Network Agent](https://maciejonos.github.io/qbitwebui/guide/network-agent)
+- **Network agent** - Speedtest, IP check, DNS diagnostics - [setup instructions](https://maciejonos.github.io/qbitwebui/guide/network-agent)
 
 ## Docker
 
