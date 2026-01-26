@@ -1,5 +1,5 @@
 import { useState, useEffect, lazy, Suspense, type ReactNode } from 'react'
-import { Search, FolderOpen, AlertTriangle, Rss, FileText, ArrowLeftRight, ChevronRight, BarChart3 } from 'lucide-react'
+import { Search, FolderOpen, AlertTriangle, Rss, FileText, ArrowLeftRight, ChevronRight, BarChart3, Network } from 'lucide-react'
 import { type Instance } from '../api/instances'
 
 const MobileSearchPanel = lazy(() => import('./MobileSearchPanel').then((m) => ({ default: m.MobileSearchPanel })))
@@ -13,8 +13,9 @@ const MobileCrossSeedManager = lazy(() =>
 	import('./MobileCrossSeedManager').then((m) => ({ default: m.MobileCrossSeedManager }))
 )
 const MobileStatistics = lazy(() => import('./MobileStatistics').then((m) => ({ default: m.MobileStatistics })))
+const MobileNetworkTools = lazy(() => import('./MobileNetworkTools').then((m) => ({ default: m.MobileNetworkTools })))
 
-type Tool = 'search' | 'files' | 'orphans' | 'rss' | 'logs' | 'cross-seed' | 'statistics' | null
+type Tool = 'search' | 'files' | 'orphans' | 'rss' | 'logs' | 'cross-seed' | 'statistics' | 'network' | null
 
 const Spinner = (
 	<div className="flex items-center justify-center p-8">
@@ -88,6 +89,12 @@ export function MobileTools({ instances, activeTool, onToolChange }: Props): Rea
 			return (
 				<LazyTool>
 					<MobileStatistics onBack={handleBack} />
+				</LazyTool>
+			)
+		case 'network':
+			return (
+				<LazyTool>
+					<MobileNetworkTools instances={instances} onBack={handleBack} />
 				</LazyTool>
 			)
 	}
@@ -261,6 +268,30 @@ export function MobileTools({ instances, activeTool, onToolChange }: Props): Rea
 						</h3>
 						<p className="text-sm mt-0.5" style={{ color: 'var(--text-muted)' }}>
 							View transfer history over time
+						</p>
+					</div>
+					<ChevronRight className="w-5 h-5 mt-1 shrink-0" style={{ color: 'var(--text-muted)' }} />
+				</div>
+			</button>
+
+			<button
+				onClick={() => onToolChange('network')}
+				className="w-full p-4 rounded-2xl border text-left active:scale-[0.98] transition-transform"
+				style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border)' }}
+			>
+				<div className="flex items-start gap-4">
+					<div
+						className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0"
+						style={{ backgroundColor: 'color-mix(in srgb, var(--accent) 15%, transparent)' }}
+					>
+						<Network className="w-6 h-6" style={{ color: 'var(--accent)' }} strokeWidth={1.5} />
+					</div>
+					<div className="flex-1 min-w-0">
+						<h3 className="font-semibold" style={{ color: 'var(--text-primary)' }}>
+							Network Tools
+						</h3>
+						<p className="text-sm mt-0.5" style={{ color: 'var(--text-muted)' }}>
+							Run diagnostics from your instance
 						</p>
 					</div>
 					<ChevronRight className="w-5 h-5 mt-1 shrink-0" style={{ color: 'var(--text-muted)' }} />

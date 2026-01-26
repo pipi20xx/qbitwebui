@@ -19,7 +19,7 @@ const AddTorrentModal = lazy(() =>
 )
 
 type MainTab = 'torrents' | 'tools'
-type Tool = 'search' | 'files' | 'orphans' | 'rss' | 'logs' | 'cross-seed' | 'statistics' | null
+type Tool = 'search' | 'files' | 'orphans' | 'rss' | 'logs' | 'cross-seed' | 'statistics' | 'network' | null
 
 const toolUrlMap: Record<string, Tool> = {
 	indexers: 'search',
@@ -30,6 +30,7 @@ const toolUrlMap: Record<string, Tool> = {
 	logs: 'logs',
 	'cross-seed': 'cross-seed',
 	statistics: 'statistics',
+	network: 'network',
 }
 
 const toolToUrl: Record<NonNullable<Tool>, string> = {
@@ -40,6 +41,7 @@ const toolToUrl: Record<NonNullable<Tool>, string> = {
 	logs: 'logs',
 	'cross-seed': 'cross-seed',
 	statistics: 'statistics',
+	network: 'network',
 }
 
 function parseHash(): { tab: MainTab; tool: Tool } {
