@@ -3,6 +3,7 @@ import { defineConfig } from 'vitepress'
 export default defineConfig({
 	title: 'qbitwebui',
 	description: 'Modern web interface for qBittorrent',
+	base: '/qbitwebui/',
 	themeConfig: {
 		logo: '/logo.svg',
 		nav: [
