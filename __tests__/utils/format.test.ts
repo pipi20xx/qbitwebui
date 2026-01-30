@@ -19,16 +19,16 @@ describe('formatSpeed', () => {
         expect(formatSpeed(1023)).toBe('1023 B/s')
     })
 
-    it('formats kilobytes per second', () => {
-        expect(formatSpeed(1024)).toBe('1.0 KB/s')
-        expect(formatSpeed(1536)).toBe('1.5 KB/s')
-        expect(formatSpeed(1024 * 1024 - 1)).toBe('1024.0 KB/s')
+    it('formats kibibytes per second', () => {
+        expect(formatSpeed(1024)).toBe('1.0 KiB/s')
+        expect(formatSpeed(1536)).toBe('1.5 KiB/s')
+        expect(formatSpeed(1024 * 1024 - 1)).toBe('1024.0 KiB/s')
     })
 
-    it('formats megabytes per second', () => {
-        expect(formatSpeed(1024 * 1024)).toBe('1.00 MB/s')
-        expect(formatSpeed(1.5 * 1024 * 1024)).toBe('1.50 MB/s')
-        expect(formatSpeed(100 * 1024 * 1024)).toBe('100.00 MB/s')
+    it('formats mebibytes per second', () => {
+        expect(formatSpeed(1024 * 1024)).toBe('1.00 MiB/s')
+        expect(formatSpeed(1.5 * 1024 * 1024)).toBe('1.50 MiB/s')
+        expect(formatSpeed(100 * 1024 * 1024)).toBe('100.00 MiB/s')
     })
 
     it('returns dash when showZero is false and value is 0', () => {
@@ -43,24 +43,24 @@ describe('formatSize', () => {
         expect(formatSize(1023)).toBe('1023 B')
     })
 
-    it('formats kilobytes', () => {
-        expect(formatSize(1024)).toBe('1.0 KB')
-        expect(formatSize(1536)).toBe('1.5 KB')
+    it('formats kibibytes', () => {
+        expect(formatSize(1024)).toBe('1.0 KiB')
+        expect(formatSize(1536)).toBe('1.5 KiB')
     })
 
-    it('formats megabytes', () => {
-        expect(formatSize(1024 * 1024)).toBe('1.0 MB')
-        expect(formatSize(500 * 1024 * 1024)).toBe('500.0 MB')
+    it('formats mebibytes', () => {
+        expect(formatSize(1024 * 1024)).toBe('1.0 MiB')
+        expect(formatSize(500 * 1024 * 1024)).toBe('500.0 MiB')
     })
 
-    it('formats gigabytes', () => {
-        expect(formatSize(1024 * 1024 * 1024)).toBe('1.00 GB')
-        expect(formatSize(4.7 * 1024 * 1024 * 1024)).toBe('4.70 GB')
+    it('formats gibibytes', () => {
+        expect(formatSize(1024 * 1024 * 1024)).toBe('1.00 GiB')
+        expect(formatSize(4.7 * 1024 * 1024 * 1024)).toBe('4.70 GiB')
     })
 
-    it('formats terabytes', () => {
-        expect(formatSize(1024 * 1024 * 1024 * 1024)).toBe('1.00 TB')
-        expect(formatSize(2.5 * 1024 * 1024 * 1024 * 1024)).toBe('2.50 TB')
+    it('formats tebibytes', () => {
+        expect(formatSize(1024 * 1024 * 1024 * 1024)).toBe('1.00 TiB')
+        expect(formatSize(2.5 * 1024 * 1024 * 1024 * 1024)).toBe('2.50 TiB')
     })
 })
 
@@ -73,14 +73,14 @@ describe('formatCompactSpeed', () => {
         expect(formatCompactSpeed(512)).toBe('512B')
     })
 
-    it('formats compact kilobytes', () => {
-        expect(formatCompactSpeed(1024)).toBe('1K')
-        expect(formatCompactSpeed(2048)).toBe('2K')
+    it('formats compact kibibytes', () => {
+        expect(formatCompactSpeed(1024)).toBe('1Ki')
+        expect(formatCompactSpeed(2048)).toBe('2Ki')
     })
 
-    it('formats compact megabytes', () => {
-        expect(formatCompactSpeed(1024 * 1024)).toBe('1.0M')
-        expect(formatCompactSpeed(10.5 * 1024 * 1024)).toBe('10.5M')
+    it('formats compact mebibytes', () => {
+        expect(formatCompactSpeed(1024 * 1024)).toBe('1.0Mi')
+        expect(formatCompactSpeed(10.5 * 1024 * 1024)).toBe('10.5Mi')
     })
 })
 
@@ -89,16 +89,16 @@ describe('formatCompactSize', () => {
         expect(formatCompactSize(512)).toBe('512B')
     })
 
-    it('formats compact kilobytes', () => {
-        expect(formatCompactSize(1024)).toBe('1K')
+    it('formats compact kibibytes', () => {
+        expect(formatCompactSize(1024)).toBe('1Ki')
     })
 
-    it('formats compact megabytes', () => {
-        expect(formatCompactSize(1024 * 1024)).toBe('1M')
+    it('formats compact mebibytes', () => {
+        expect(formatCompactSize(1024 * 1024)).toBe('1Mi')
     })
 
-    it('formats compact gigabytes', () => {
-        expect(formatCompactSize(1024 * 1024 * 1024)).toBe('1.0G')
+    it('formats compact gibibytes', () => {
+        expect(formatCompactSize(1024 * 1024 * 1024)).toBe('1.0Gi')
     })
 })
 
@@ -300,25 +300,25 @@ describe('normalizeSearch', () => {
 describe('format edge cases', () => {
     describe('formatSpeed edge cases', () => {
         it('handles very large values', () => {
-            expect(formatSpeed(1024 * 1024 * 1024)).toBe('1024.00 MB/s')
+            expect(formatSpeed(1024 * 1024 * 1024)).toBe('1024.00 MiB/s')
         })
 
         it('handles floating point precision', () => {
-            expect(formatSpeed(1536)).toBe('1.5 KB/s')
+            expect(formatSpeed(1536)).toBe('1.5 KiB/s')
         })
     })
 
     describe('formatSize edge cases', () => {
         it('handles exact boundary values', () => {
-            expect(formatSize(1024)).toBe('1.0 KB')
-            expect(formatSize(1024 * 1024)).toBe('1.0 MB')
-            expect(formatSize(1024 * 1024 * 1024)).toBe('1.00 GB')
-            expect(formatSize(1024 * 1024 * 1024 * 1024)).toBe('1.00 TB')
+            expect(formatSize(1024)).toBe('1.0 KiB')
+            expect(formatSize(1024 * 1024)).toBe('1.0 MiB')
+            expect(formatSize(1024 * 1024 * 1024)).toBe('1.00 GiB')
+            expect(formatSize(1024 * 1024 * 1024 * 1024)).toBe('1.00 TiB')
         })
 
         it('handles values just below boundaries', () => {
             expect(formatSize(1023)).toBe('1023 B')
-            expect(formatSize(1024 * 1024 - 1)).toBe('1024.0 KB')
+            expect(formatSize(1024 * 1024 - 1)).toBe('1024.0 KiB')
         })
     })
 

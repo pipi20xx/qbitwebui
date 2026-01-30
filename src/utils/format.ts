@@ -1,30 +1,30 @@
 export function formatSpeed(bytes: number, showZero = true): string {
 	if (bytes === 0 && !showZero) return '—'
 	if (bytes < 1024) return `${bytes} B/s`
-	if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB/s`
-	return `${(bytes / 1024 / 1024).toFixed(2)} MB/s`
+	if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KiB/s`
+	return `${(bytes / 1024 / 1024).toFixed(2)} MiB/s`
 }
 
 export function formatSize(bytes: number): string {
 	if (bytes < 1024) return `${bytes} B`
-	if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
-	if (bytes < 1024 * 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(1)} MB`
-	if (bytes < 1024 * 1024 * 1024 * 1024) return `${(bytes / 1024 / 1024 / 1024).toFixed(2)} GB`
-	return `${(bytes / 1024 / 1024 / 1024 / 1024).toFixed(2)} TB`
+	if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KiB`
+	if (bytes < 1024 * 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(1)} MiB`
+	if (bytes < 1024 * 1024 * 1024 * 1024) return `${(bytes / 1024 / 1024 / 1024).toFixed(2)} GiB`
+	return `${(bytes / 1024 / 1024 / 1024 / 1024).toFixed(2)} TiB`
 }
 
 export function formatCompactSpeed(bytes: number): string {
 	if (bytes === 0) return '-'
 	if (bytes < 1024) return `${bytes}B`
-	if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)}K`
-	return `${(bytes / 1024 / 1024).toFixed(1)}M`
+	if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)}Ki`
+	return `${(bytes / 1024 / 1024).toFixed(1)}Mi`
 }
 
 export function formatCompactSize(bytes: number): string {
 	if (bytes < 1024) return `${bytes}B`
-	if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)}K`
-	if (bytes < 1024 * 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(0)}M`
-	return `${(bytes / 1024 / 1024 / 1024).toFixed(1)}G`
+	if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)}Ki`
+	if (bytes < 1024 * 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(0)}Mi`
+	return `${(bytes / 1024 / 1024 / 1024).toFixed(1)}Gi`
 }
 
 export function formatEta(seconds: number): string {
