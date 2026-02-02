@@ -1,0 +1,529 @@
+import { type Instance } from '../api/instances'
+import { formatSize, formatCountdown } from '../utils/format'
+import { Toggle, Select, MultiSelect } from './ui'
+import { useCrossSeed, formatTimestamp, LOG_LEVEL_COLORS } from '../hooks/useCrossSeed'
+
+interface Props {
+	instances: Instance[]
+}
+
+export function CrossSeedManager({ instances }: Props) {
+	const {
+		selectedInstance,
+		setSelectedInstance,
+		config,
+		setConfig,
+		status,
+		cacheStats,
+		availableIndexers,
+		logs,
+		loading,
+		error,
+		success,
+		saving,
+		autoScroll,
+		setAutoScroll,
+		logsContainerRef,
+		prowlarrIntegrations,
+		isRunning,
+		stopping,
+		handleSave,
+		handleScan,
+		handleStop,
+		handleClearCache,
+	} = useCrossSeed(instances)
+
+	if (instances.length === 0) {
+		return (
+			<div
+				className="text-center py-12 rounded-lg border"
+				style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border)' }}
+			>
+				<p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+					未配置实例
+				</p>
+			</div>
+		)
+	}
+
+	if (loading) {
+		return (
+			<div
+				className="p-6 rounded-lg border flex items-center gap-3"
+				style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border)' }}
+			>
+				<div
+					className="w-5 h-5 border-2 rounded-full animate-spin"
+					style={{ borderColor: 'var(--border)', borderTopColor: 'var(--accent)' }}
+				/>
+				<span className="text-sm" style={{ color: 'var(--text-muted)' }}>
+					加载中...
+				</span>
+			</div>
+		)
+	}
+
+	if (!config) return null
+
+	return (
+		<div className="flex flex-col h-full relative">
+			<a
+				href="https://github.com/Maciejonos/qbitwebui/issues"
+				target="_blank"
+				rel="noopener noreferrer"
+				className="absolute top-0 right-0 px-3 py-2 rounded-lg border text-xs"
+				style={{ borderColor: 'var(--error)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }}
+			>
+				<span style={{ color: 'var(--error)' }}>实验性功能</span> · 反馈问题
+			</a>
+			<div
+				className="shrink-0 flex items-center justify-between pb-4 border-b mb-4"
+				style={{ borderColor: 'var(--border)' }}
+			>
+				<div className="flex items-center gap-4">
+					<h1 className="text-base font-semibold" style={{ color: 'var(--text-primary)' }}>
+						辅种管理 (Cross-Seed)
+					</h1>
+					{instances.length > 1 && (
+						<Select
+							value={String(selectedInstance ?? '')}
+							onChange={(v) => setSelectedInstance(Number(v))}
+							options={instances.map((i) => ({ value: String(i.id), label: i.label }))}
+							minWidth="140px"
+						/>
+					)}
+				</div>
+				<div className="flex items-center gap-3">
+					{(error || success) && (
+						<span
+							className="text-xs px-3 py-1 rounded"
+							style={{
+								backgroundColor: error
+									? 'color-mix(in srgb, var(--error) 15%, transparent)'
+									: 'color-mix(in srgb, #a6e3a1 15%, transparent)'
+								,
+								color: error ? 'var(--error)' : '#a6e3a1',
+							}}
+						>
+							{error || success}
+						</span>
+					)}
+					{prowlarrIntegrations.length === 0 && (
+						<span
+							className="text-xs px-3 py-1 rounded"
+							style={{
+								backgroundColor: 'color-mix(in srgb, var(--warning) 15%, transparent)'
+								,
+								color: 'var(--warning)'
+							}}
+						>
+							未关联 Prowlarr
+						</span>
+					)}
+				</div>
+			</div>
+
+			<div
+				className="shrink-0 grid grid-cols-5 gap-4 p-4 rounded-lg border mb-4"
+				style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border)' }}
+			>
+				<div>
+					<div className="text-xs uppercase tracking-wider mb-1" style={{ color: 'var(--text-muted)' }}>
+						调度器
+					</div>
+					<div className="text-sm font-medium" style={{ color: status?.enabled ? '#a6e3a1' : 'var(--text-muted)' }}>
+						{status?.enabled ? '开启' : '关闭'}
+					</div>
+				</div>
+				<div>
+					<div className="text-xs uppercase tracking-wider mb-1" style={{ color: 'var(--text-muted)' }}>
+						当前状态
+					</div>
+					<div
+						className="text-sm font-medium flex items-center gap-2"
+						style={{ color: stopping ? 'var(--warning)' : isRunning ? 'var(--accent)' : 'var(--text-secondary)' }}
+					>
+						{(isRunning || stopping) && (
+							<span
+								className="w-2 h-2 rounded-full animate-pulse"
+								style={{ backgroundColor: stopping ? 'var(--warning)' : 'var(--accent)' }}
+							/>
+						)}
+						{stopping ? '正在停止' : isRunning ? '运行中' : '空闲'}
+					</div>
+				</div>
+				<div>
+					<div className="text-xs uppercase tracking-wider mb-1" style={{ color: 'var(--text-muted)' }}>
+						上次运行
+					</div>
+					<div className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+						{formatTimestamp(status?.lastRun ?? null)}
+					</div>
+				</div>
+				<div>
+					<div className="text-xs uppercase tracking-wider mb-1" style={{ color: 'var(--text-muted)' }}>
+						下次运行
+					</div>
+					<div className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+						{status?.enabled ? formatCountdown(status?.nextRun ?? null) : '—'}
+					</div>
+				</div>
+				<div>
+					<div className="text-xs uppercase tracking-wider mb-1" style={{ color: 'var(--text-muted)' }}>
+						缓存种子
+					</div>
+					<div className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+						{cacheStats ? `${cacheStats.cache.count} (${formatSize(cacheStats.cache.totalSize)})` : '0'}
+					</div>
+				</div>
+			</div>
+
+			<div className="flex-1 grid grid-cols-2 grid-rows-[1fr] gap-4 min-h-0 overflow-hidden">
+				<div className="flex flex-col gap-4 min-h-0 overflow-auto">
+					<div
+						className="shrink-0 p-4 rounded-lg border"
+						style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border)' }}
+					>
+						<div className="text-xs font-medium uppercase tracking-wider mb-4" style={{ color: 'var(--text-muted)' }}>
+							任务配置
+						</div>
+						<div className="space-y-4">
+							<div className="flex items-center justify-between">
+								<span className="text-sm" style={{ color: 'var(--text-primary)' }}>
+									启用调度器
+								</span>
+								<Toggle checked={config.enabled} onChange={(v) => setConfig({ ...config, enabled: v })} />
+							</div>
+							<div>
+								<label className="block text-xs mb-1.5" style={{ color: 'var(--text-muted)' }}>
+									Prowlarr 实例
+								</label>
+								<Select
+									value={config.integration_id ? String(config.integration_id) : ''}
+									onChange={(v) => setConfig({ ...config, integration_id: v ? Number(v) : null, indexer_ids: [] })}
+									options={[
+										{ value: '', label: '无' },
+										...prowlarrIntegrations.map((i) => ({ value: String(i.id), label: i.label }))
+									]}
+									minWidth="100%"
+								/>
+							</div>
+							<div className="grid grid-cols-2 gap-3">
+								<div>
+									<label className="block text-xs mb-1.5" style={{ color: 'var(--text-muted)' }}>
+										运行间隔 (小时)
+									</label>
+									<input
+										type="number"
+										min="1"
+										max="168"
+										value={config.interval_hours}
+										onChange={(e) => setConfig({ ...config, interval_hours: parseInt(e.target.value) || 24 })}
+										className="w-full px-3 py-2 rounded-lg border text-sm"
+										style={{
+											backgroundColor: 'var(--bg-tertiary)'
+											,
+											borderColor: 'var(--border)'
+											,
+											color: 'var(--text-primary)'
+										}}
+									/>
+								</div>
+								<div>
+									<label className="block text-xs mb-1.5" style={{ color: 'var(--text-muted)' }}>
+										延迟 (30-3600秒)
+									</label>
+									<input
+										type="number"
+										min="30"
+										max="3600"
+										value={config.delay_seconds}
+										onChange={(e) =>
+											setConfig({ ...config, delay_seconds: Math.max(30, parseInt(e.target.value) || 30) })
+										}
+										className="w-full px-3 py-2 rounded-lg border text-sm"
+										style={{
+											backgroundColor: 'var(--bg-tertiary)'
+											,
+											borderColor: 'var(--border)'
+											,
+											color: 'var(--text-primary)'
+										}}
+									/>
+								</div>
+							</div>
+							{availableIndexers.length > 0 && (
+								<div>
+									<label className="block text-xs mb-1.5" style={{ color: 'var(--text-muted)' }}>
+										索引器 (已选 {config.indexer_ids.length}/{availableIndexers.length})
+									</label>
+									<MultiSelect
+										options={availableIndexers.map((idx) => ({ value: idx.id, label: idx.name }))}
+										selected={config.indexer_ids}
+										onChange={(ids) => setConfig({ ...config, indexer_ids: ids })}
+										placeholder="选择索引器..."
+									/>
+								</div>
+							)}
+							<div className="grid grid-cols-2 gap-3">
+								<div>
+									<label className="block text-xs mb-1.5" style={{ color: 'var(--text-muted)' }}>
+										分类后缀
+									</label>
+									<input
+										type="text"
+										value={config.category_suffix}
+										onChange={(e) => setConfig({ ...config, category_suffix: e.target.value })}
+										className="w-full px-3 py-2 rounded-lg border text-sm"
+										style={{
+											backgroundColor: 'var(--bg-tertiary)'
+											,
+											borderColor: 'var(--border)'
+											,
+											color: 'var(--text-primary)'
+										}}
+									/>
+								</div>
+								<div>
+									<label className="block text-xs mb-1.5" style={{ color: 'var(--text-muted)' }}>
+										标签
+									</label>
+									<input
+										type="text"
+										value={config.tag}
+										onChange={(e) => setConfig({ ...config, tag: e.target.value })}
+										className="w-full px-3 py-2 rounded-lg border text-sm"
+										style={{
+											backgroundColor: 'var(--bg-tertiary)'
+											,
+											borderColor: 'var(--border)'
+											,
+											color: 'var(--text-primary)'
+										}}
+									/>
+								</div>
+							</div>
+							<div>
+								<label className="block text-xs mb-1.5" style={{ color: 'var(--text-muted)' }}>
+									匹配模式
+								</label>
+								<Select
+									value={config.match_mode}
+									onChange={(v) => setConfig({ ...config, match_mode: v as 'strict' | 'flexible' })}
+									options={[
+										{ value: 'strict', label: '严格匹配 (名称必须一致)' },
+										{ value: 'flexible', label: '灵活匹配 (仅校验大小，需链接目录)' }
+									]}
+									minWidth="100%"
+								/>
+							</div>
+							{config.match_mode === 'flexible' && (
+								<div>
+									<label className="block text-xs mb-1.5" style={{ color: 'var(--text-muted)' }}>
+										链接目录 (用于灵活匹配模式)
+									</label>
+									<input
+										type="text"
+										value={config.link_dir || ''}
+										onChange={(e) => setConfig({ ...config, link_dir: e.target.value || null })}
+										placeholder="/path/to/links"
+										className="w-full px-3 py-2 rounded-lg border text-sm"
+										style={{
+											backgroundColor: 'var(--bg-tertiary)'
+											,
+											borderColor: 'var(--border)'
+											,
+											color: 'var(--text-primary)'
+										}}
+									/>
+									<p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
+										当文件名不同但大小时一致时，将在此处创建硬链接
+									</p>
+								</div>
+							)}
+							<div>
+								<label className="block text-xs mb-1.5" style={{ color: 'var(--text-muted)' }}>
+									排除名单 (每行一个)
+								</label>
+								<textarea
+									value={config.blocklist.join('
+')}
+									onChange={(e) =>
+										setConfig({
+											...config,
+											blocklist: e.target.value
+																.split('
+')
+															.map((s) => s.trim())
+															.filter(Boolean)
+										})
+								}
+								placeholder="name:YIFY&#10;nameRegex:.*-RARBG$&#10;category:movies&#10;tag:private&#10;sizeBelow:100MB"
+								rows={4}
+								className="w-full px-3 py-2 rounded-lg border text-sm font-mono"
+								style={{
+									backgroundColor: 'var(--bg-tertiary)'
+									,
+									borderColor: 'var(--border)'
+									,
+									color: 'var(--text-primary)'
+									,
+									resize: 'vertical'
+								}}
+							/>
+								<p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
+									格式: 类型:值 (支持 name, nameRegex, folder, folderRegex, category, tag, tracker, infoHash, sizeBelow,
+									sizeAbove)
+								</p>
+							</div>
+							<div className="flex items-center justify-between">
+								<span className="text-sm" style={{ color: 'var(--text-primary)' }}>
+									包含单集文件
+								</span>
+								<Toggle
+									checked={config.include_single_episodes}
+									onChange={(v) => setConfig({ ...config, include_single_episodes: v })}
+								/>
+							</div>
+							<div className="flex items-center justify-between">
+								<span className="text-sm" style={{ color: 'var(--text-primary)' }}>
+									模拟运行 (只搜索不添加)
+								</span>
+								<Toggle checked={config.dry_run} onChange={(v) => setConfig({ ...config, dry_run: v })} />
+							</div>
+							<div className="flex items-center justify-between">
+								<span className="text-sm" style={{ color: 'var(--text-primary)' }}>
+									跳过校验
+								</span>
+								<Toggle checked={config.skip_recheck} onChange={(v) => setConfig({ ...config, skip_recheck: v })} />
+							</div>
+							<div className="flex items-center justify-end pt-2">
+								<button
+									onClick={handleSave}
+									disabled={saving}
+									className="px-5 py-2 rounded-lg text-sm font-medium disabled:opacity-50"
+									style={{ backgroundColor: 'var(--accent)', color: 'var(--accent-contrast)' }}
+								>
+									{saving ? '正在保存...' : '保存配置'}
+								</button>
+							</div>
+						</div>
+					</div>
+
+					<div
+						className="shrink-0 p-4 rounded-lg border"
+						style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border)' }}
+					>
+						<div className="text-xs font-medium uppercase tracking-wider mb-4" style={{ color: 'var(--text-muted)' }}>
+							操作面板
+						</div>
+						<div className="grid grid-cols-2 gap-3">
+							<button
+								onClick={() => handleScan(false)}
+								disabled={isRunning || !config.integration_id}
+								className="px-3 py-2 rounded-lg text-sm font-medium disabled:opacity-50"
+								style={{ backgroundColor: 'var(--accent)', color: 'var(--accent-contrast)' }}
+							>
+								立即扫描
+							</button>
+							<button
+								onClick={() => handleScan(true)}
+								disabled={isRunning || !config.integration_id}
+								className="px-3 py-2 rounded-lg text-sm border disabled:opacity-50 flex items-center justify-center gap-1.5"
+								style={{ borderColor: 'var(--border)', color: 'var(--text-primary)' }}
+							>
+								强制扫描
+								<span
+									title="重新扫描所有种子，包括之前已搜索过的。当索引器有新内容或修改设置后使用。"
+									className="inline-flex items-center justify-center w-4 h-4 rounded-full text-xs cursor-help"
+									style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-muted)' }}
+								>
+									?
+								</span>
+							</button>
+							<button
+								onClick={handleStop}
+								disabled={!isRunning || stopping}
+								className="px-3 py-2 rounded-lg text-sm border disabled:opacity-50"
+								style={{
+									borderColor: isRunning ? 'var(--error)' : 'var(--border)'
+									,
+									color: isRunning ? 'var(--error)' : 'var(--text-muted)'
+								}}
+							>
+								{stopping ? '正在停止...' : '停止'}
+							</button>
+							<button
+								onClick={handleClearCache}
+								className="px-3 py-2 rounded-lg text-sm border flex items-center justify-center gap-1.5"
+								style={{ borderColor: 'var(--border)', color: 'var(--text-primary)' }}
+							>
+								清空种子缓存
+								<span
+									title="删除本地缓存的 .torrent 文件。"
+									className="inline-flex items-center justify-center w-4 h-4 rounded-full text-xs cursor-help"
+									style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-muted)' }}
+								>
+									?
+								</span>
+							</button>
+						</div>
+					</div>
+				</div>
+
+				<div
+					className="flex flex-col p-4 rounded-lg border h-full min-h-0 overflow-hidden"
+					style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border)' }}
+				>
+					<div className="shrink-0 flex items-center justify-between mb-4">
+						<div className="text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
+							运行日志
+						</div>
+						<div className="flex items-center gap-4">
+							<span className="text-xs" style={{ color: 'var(--text-muted)' }}>
+								{logs.length} 条记录
+							</span>
+							<label className="flex items-center gap-2 cursor-pointer">
+								<span className="text-xs" style={{ color: 'var(--text-muted)' }}>
+									自动滚动
+								</span>
+								<Toggle checked={autoScroll} onChange={setAutoScroll} />
+							</label>
+						</div>
+					</div>
+					<div
+						ref={logsContainerRef}
+						className="h-0 grow overflow-y-auto rounded-lg p-3 font-mono text-xs leading-relaxed"
+						style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-secondary)' }}
+					>
+						{logs.length === 0 ? (
+							<div className="text-center py-8" style={{ color: 'var(--text-muted)' }}>
+								暂无日志
+							</div>
+						) : (
+							logs.map((log, i) => {
+								const isMatch = log.message.includes('MATCH:')
+								const isAdded = log.message.includes('Added torrent:')
+								const isInjection = isMatch || isAdded
+								return (
+									<div key={i} className="py-0.5 whitespace-pre-wrap break-all">
+										<span style={{ color: 'var(--text-muted)' }}>{log.timestamp.slice(11, 19)}</span>{' '}
+										<span style={{ color: LOG_LEVEL_COLORS[log.level] || 'var(--text-muted)' }}>[{log.level}]</span>{' '}
+										<span
+											style={{
+												color: isInjection ? '#a6e3a1' : undefined,
+												fontWeight: isInjection ? 500 : undefined,
+											}}
+										>
+											{log.message}
+										</span>
+									</div>
+								)
+							})
+						)}
+					</div>
+				</div>
+			</div>
+		</div>
+	)
+}

@@ -1,0 +1,472 @@
+import { useState, useEffect } from 'react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { Drawer } from 'vaul'
+import { Play, Pause, Trash2 } from 'lucide-react'
+import * as api from '../api/qbittorrent'
+import type { TorrentState } from '../types/qbittorrent'
+import { formatSize, formatSpeed, formatDate, formatDuration } from '../utils/format'
+
+type Tab = 'general' | 'files' | 'trackers' | 'peers' | 'http'
+
+const PAUSED_STATES: TorrentState[] = ['pausedDL', 'pausedUP', 'stoppedDL', 'stoppedUP']
+
+function getTrackerStatus(status: number): string {
+	switch (status) {
+		case 2:
+			return 'Working'
+		case 3:
+			return 'Updating'
+		case 4:
+			return 'Error'
+		default:
+			return '禁用'
+	}
+}
+
+function get优先级Label(priority: number): string {
+	switch (priority) {
+		case 0:
+			return 'Skip'
+		case 1:
+			return '正常'
+		default:
+			return '高'
+	}
+}
+
+interface Props {
+	torrentHash: string
+	instanceId: number
+	onClose: () => void
+}
+
+export function MobileTorrentDetail({ torrentHash, instanceId, onClose }: Props) {
+	const [tab, setTab] = useState<Tab>('general')
+	const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+	const [deleteFiles, setDeleteFiles] = useState(false)
+	const queryClient = useQueryClient()
+
+	useEffect(() => {
+		if (document.activeElement instanceof HTMLElement) {
+			document.activeElement.blur()
+		}
+		window.history.pushState({ drawer: 'open' }, '')
+		const handlePopState = () => onClose()
+		window.addEventListener('popstate', handlePopState)
+		return () => window.removeEventListener('popstate', handlePopState)
+	}, [onClose])
+
+	const { data: torrents } = useQuery({
+		queryKey: ['torrents', instanceId],
+		queryFn: () => api.getTorrents(instanceId),
+		refetchInterval: 2000,
+	})
+	const torrent = torrents?.find((t) => t.hash === torrentHash)
+
+	const { data: properties } = useQuery({
+		queryKey: ['torrent-properties', instanceId, torrentHash],
+		queryFn: () => api.getTorrentProperties(instanceId, torrentHash),
+	})
+	const { data: trackers } = useQuery({
+		queryKey: ['torrent-trackers', instanceId, torrentHash],
+		queryFn: () => api.getTorrentTrackers(instanceId, torrentHash),
+	})
+	const { data: peersData } = useQuery({
+		queryKey: ['torrent-peers', instanceId, torrentHash],
+		queryFn: () => api.getTorrentPeers(instanceId, torrentHash),
+		refetchInterval: 3000,
+	})
+	const { data: files } = useQuery({
+		queryKey: ['torrent-files', instanceId, torrentHash],
+		queryFn: () => api.getTorrentFiles(instanceId, torrentHash),
+	})
+	const { data: webSeeds } = useQuery({
+		queryKey: ['torrent-webseeds', instanceId, torrentHash],
+		queryFn: () => api.getTorrentWebSeeds(instanceId, torrentHash),
+	})
+
+	const stopMutation = useMutation({
+		mutationFn: () => api.stopTorrents(instanceId, [torrentHash]),
+		onSuccess: () => queryClient.invalidateQueries({ queryKey: ['torrents', instanceId] }),
+	})
+	const startMutation = useMutation({
+		mutationFn: () => api.startTorrents(instanceId, [torrentHash]),
+		onSuccess: () => queryClient.invalidateQueries({ queryKey: ['torrents', instanceId] }),
+	})
+	const deleteMutation = useMutation({
+		mutationFn: (deleteFiles: boolean) => api.deleteTorrents(instanceId, [torrentHash], deleteFiles),
+		onSuccess: () => queryClient.invalidateQueries({ queryKey: ['torrents', instanceId] }),
+	})
+
+	const isPaused = torrent ? PAUSED_STATES.includes(torrent.state) : false
+	const peers = peersData?.peers ? Object.values(peersData.peers) : []
+
+	function handleToggle() {
+		if (isPaused) {
+			startMutation.mutate()
+		} else {
+			stopMutation.mutate()
+		}
+	}
+
+	function handleDelete() {
+		deleteMutation.mutate(deleteFiles)
+		onClose()
+	}
+
+	const tabs: { id: Tab; label: string; count?: number }[] = [
+		{ id: 'general', label: '常规' },
+		{ id: 'files', label: '文件', count: files?.length },
+		{
+			id: 'trackers',
+			label: 'Tracker',
+			count: trackers?.filter((t) => t.url.startsWith('http') || t.url.startsWith('udp')).length,
+		},
+		{ id: 'peers', label: '用户', count: peers.length },
+		{ id: 'http', label: 'HTTP', count: webSeeds?.length },
+	]
+
+	if (!torrent) {
+		return null
+	}
+
+	return (
+		<>
+			<Drawer.Root
+				open={!showDeleteConfirm}
+				onOpenChange={(open) => !open && !showDeleteConfirm && onClose()}
+				shouldScaleBackground={false}
+			>
+				<Drawer.Portal>
+					<Drawer.Overlay className="fixed inset-0 z-50" style={{ backgroundColor: 'rgba(0,0,0,0.6)' }} />
+					<Drawer.Content
+						className="fixed inset-x-0 bottom-0 z-50 rounded-t-3xl border-t flex flex-col outline-none h-[90vh]"
+						style={{
+							backgroundColor: 'var(--bg-primary)',
+							borderColor: 'var(--border)',
+						}}
+					>
+						<div className="flex justify-center pt-3 pb-2">
+							<div className="w-10 h-1 rounded-full" style={{ backgroundColor: 'var(--text-muted)' }} />
+						</div>
+
+						<div className="px-5 pb-4 border-b" style={{ borderColor: 'var(--border)' }}>
+							<Drawer.Title
+								className="text-base font-semibold leading-snug line-clamp-2"
+								style={{ color: 'var(--text-primary)' }}
+							>
+								{torrent.name}
+							</Drawer.Title>
+							<Drawer.Description className="sr-only">Torrent details</Drawer.Description>
+							<div className="flex items-center gap-2 mt-2">
+								<div
+									className="h-1.5 flex-1 rounded-full overflow-hidden"
+									style={{ backgroundColor: 'var(--bg-tertiary)' }}
+								>
+									<div
+										className="h-full rounded-full"
+										style={{
+											width: `${Math.round(torrent.progress * 100)}%`,
+											backgroundColor: 'var(--accent)',
+										}}
+									/>
+								</div>
+								<span className="text-xs font-medium tabular-nums" style={{ color: 'var(--text-muted)' }}>
+									{Math.round(torrent.progress * 100)}%
+								</span>
+							</div>
+						</div>
+
+						<div className="flex gap-3 p-4 border-b" style={{ borderColor: 'var(--border)' }}>
+							<button
+								onClick={handleToggle}
+								disabled={stopMutation.isPending || startMutation.isPending}
+								className="flex-1 py-3 rounded-xl font-medium text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform disabled:opacity-50"
+								style={{
+									backgroundColor: isPaused ? 'var(--accent)' : 'var(--bg-tertiary)',
+									color: isPaused ? 'var(--accent-contrast)' : 'var(--text-primary)',
+								}}
+							>
+								{isPaused ? (
+									<>
+										<Play className="w-5 h-5" strokeWidth={2} />
+										Resume
+									</>
+								) : (
+									<>
+										<Pause className="w-5 h-5" strokeWidth={2} />
+										Pause
+									</>
+								)}
+							</button>
+							<button
+								onClick={() => setShowDeleteConfirm(true)}
+								className="py-3 px-5 rounded-xl font-medium text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
+								style={{ backgroundColor: 'color-mix(in srgb, var(--error) 15%, transparent)', color: 'var(--error)' }}
+							>
+								<Trash2 className="w-5 h-5" strokeWidth={2} />
+								Delete
+							</button>
+						</div>
+
+						<div className="mx-4 mt-3">
+							<div className="flex p-1.5 rounded-xl" style={{ backgroundColor: 'var(--bg-secondary)' }}>
+								{tabs.map((t) => (
+									<button
+										key={t.id}
+										onClick={() => setTab(t.id)}
+										className="flex-1 px-1 py-2 rounded-lg text-xs font-medium transition-all text-center whitespace-nowrap"
+										style={{
+											backgroundColor: tab === t.id ? 'var(--accent)' : 'transparent',
+											color: tab === t.id ? 'var(--accent-contrast)' : 'var(--text-muted)',
+										}}
+									>
+										{t.label}
+										{t.count ? ` (${t.count})` : ''}
+									</button>
+								))}
+							</div>
+						</div>
+
+						<div
+							className="flex-1 min-h-0 overflow-y-auto px-4 pt-3"
+							style={{ paddingBottom: 'max(2rem, env(safe-area-inset-bottom, 2rem))' }}
+						>
+							{tab === 'general' && (
+								<div className="space-y-3">
+									<InfoRow label="Size" value={formatSize(torrent.size)} />
+									<InfoRow label="已下载" value={formatSize(torrent.downloaded)} />
+									<InfoRow label="已上传" value={formatSize(torrent.uploaded)} />
+									<InfoRow
+										label="分享率"
+										value={
+											torrent.downloaded === 0 && torrent.progress >= 1 && torrent.size > 0
+												? '∞'
+												: torrent.ratio.toFixed(2)
+										}
+									/>
+									<div className="h-px my-2" style={{ backgroundColor: 'var(--border)' }} />
+									<InfoRow label="Download Speed" value={formatSpeed(torrent.dlspeed)} accent />
+									<InfoRow label="Upload Speed" value={formatSpeed(torrent.upspeed)} accent="#a6e3a1" />
+									<InfoRow label="Seeds" value={`${torrent.num_seeds}`} />
+									<InfoRow label="Peers" value={`${torrent.num_leechs}`} />
+									<div className="h-px my-2" style={{ backgroundColor: 'var(--border)' }} />
+									<InfoRow label="Added" value={formatDate(torrent.added_on)} />
+									<InfoRow label="Completed" value={formatDate(torrent.completion_on)} />
+									<InfoRow label="Seeding Time" value={formatDuration(torrent.seeding_time)} />
+									<InfoRow label="Last Activity" value={formatDate(torrent.last_activity)} />
+									<div className="h-px my-2" style={{ backgroundColor: 'var(--border)' }} />
+									<InfoRow label="Category" value={torrent.category || '-'} />
+									<InfoRow label="Tags" value={torrent.tags || '-'} />
+									<InfoRow label="保存路径" value={torrent.save_path} small />
+									{properties?.comment && <InfoRow label="Comment" value={properties.comment} small />}
+								</div>
+							)}
+
+							{tab === 'files' && (
+								<div className="space-y-2">
+									{files?.map((file, i) => (
+										<div
+											key={i}
+											className="p-3 rounded-xl border"
+											style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border)' }}
+										>
+											<div className="text-xs break-all leading-relaxed" style={{ color: 'var(--text-primary)' }}>
+												{file.name}
+											</div>
+											<div className="flex items-center gap-3 mt-2">
+												<div
+													className="flex-1 h-1 rounded-full overflow-hidden"
+													style={{ backgroundColor: 'var(--bg-tertiary)' }}
+												>
+													<div
+														className="h-full rounded-full"
+														style={{ width: `${Math.round(file.progress * 100)}%`, backgroundColor: 'var(--accent)' }}
+													/>
+												</div>
+												<span className="text-xs tabular-nums" style={{ color: 'var(--text-muted)' }}>
+													{Math.round(file.progress * 100)}%
+												</span>
+											</div>
+											<div className="flex items-center gap-3 mt-2 text-xs" style={{ color: 'var(--text-muted)' }}>
+												<span>{formatSize(file.size)}</span>
+												<span>优先级: {get优先级Label(file.priority)}</span>
+											</div>
+										</div>
+									))}
+									{(!files || files.length === 0) && (
+										<div className="py-8 text-center text-sm" style={{ color: 'var(--text-muted)' }}>
+											No files
+										</div>
+									)}
+								</div>
+							)}
+
+							{tab === 'trackers' && (
+								<div className="space-y-2">
+									{trackers
+										?.filter((t) => t.url.startsWith('http') || t.url.startsWith('udp'))
+										.map((tracker, i) => (
+											<div
+												key={i}
+												className="p-3 rounded-xl border"
+												style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border)' }}
+											>
+												<div className="text-xs font-mono break-all" style={{ color: 'var(--text-primary)' }}>
+													{tracker.url}
+												</div>
+												<div className="flex items-center gap-3 mt-2 text-xs">
+													<span style={{ color: tracker.status === 2 ? '#a6e3a1' : 'var(--text-muted)' }}>
+														{getTrackerStatus(tracker.status)}
+													</span>
+													<span style={{ color: 'var(--text-muted)' }}>Seeds: {tracker.num_seeds}</span>
+													<span style={{ color: 'var(--text-muted)' }}>Peers: {tracker.num_peers}</span>
+												</div>
+											</div>
+										))}
+									{(!trackers ||
+										trackers.filter((t) => t.url.startsWith('http') || t.url.startsWith('udp')).length === 0) && (
+										<div className="py-8 text-center text-sm" style={{ color: 'var(--text-muted)' }}>
+											No trackers
+										</div>
+									)}
+								</div>
+							)}
+
+							{tab === 'peers' && (
+								<div className="space-y-2">
+									{peers.map((peer, i) => (
+										<div
+											key={i}
+											className="p-3 rounded-xl border"
+											style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border)' }}
+										>
+											<div className="flex items-center justify-between">
+												<div className="text-xs font-mono" style={{ color: 'var(--text-primary)' }}>
+													{peer.ip}:{peer.port}
+												</div>
+												<div className="text-xs" style={{ color: 'var(--text-muted)' }}>
+													{peer.country_code || '??'}
+												</div>
+											</div>
+											<div className="flex items-center gap-3 mt-2 text-xs">
+												<span style={{ color: 'var(--accent)' }}>↓ {formatSpeed(peer.dl_speed)}</span>
+												<span style={{ color: '#a6e3a1' }}>↑ {formatSpeed(peer.up_speed)}</span>
+												<span style={{ color: 'var(--text-muted)' }}>{Math.round(peer.progress * 100)}%</span>
+											</div>
+											{peer.client && (
+												<div className="text-xs mt-1 truncate" style={{ color: 'var(--text-muted)' }}>
+													{peer.client}
+												</div>
+											)}
+										</div>
+									))}
+									{peers.length === 0 && (
+										<div className="py-8 text-center text-sm" style={{ color: 'var(--text-muted)' }}>
+											No peers connected
+										</div>
+									)}
+								</div>
+							)}
+
+							{tab === 'http' && (
+								<div className="space-y-2">
+									{webSeeds?.map((seed, i) => (
+										<div
+											key={i}
+											className="p-3 rounded-xl border"
+											style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border)' }}
+										>
+											<div className="text-xs font-mono break-all" style={{ color: 'var(--text-primary)' }}>
+												{seed.url}
+											</div>
+										</div>
+									))}
+									{(!webSeeds || webSeeds.length === 0) && (
+										<div className="py-8 text-center text-sm" style={{ color: 'var(--text-muted)' }}>
+											No HTTP sources
+										</div>
+									)}
+								</div>
+							)}
+						</div>
+					</Drawer.Content>
+				</Drawer.Portal>
+			</Drawer.Root>
+
+			{showDeleteConfirm && (
+				<>
+					<div
+						className="fixed inset-0 z-[60]"
+						style={{ backgroundColor: 'rgba(0,0,0,0.6)' }}
+						onClick={() => setShowDeleteConfirm(false)}
+					/>
+					<div
+						className="fixed inset-x-4 top-1/2 -translate-y-1/2 z-[60] rounded-2xl border p-5"
+						style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border)' }}
+					>
+						<h3 className="text-lg font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>
+							Delete Torrent
+						</h3>
+						<p className="text-sm mb-4" style={{ color: 'var(--text-muted)' }}>
+							Are you sure you want to delete this torrent?
+						</p>
+						<label className="flex items-center gap-3 mb-5 cursor-pointer">
+							<input
+								type="checkbox"
+								checked={deleteFiles}
+								onChange={(e) => setDeleteFiles(e.target.checked)}
+								className="w-5 h-5 rounded"
+							/>
+							<span className="text-sm" style={{ color: 'var(--text-primary)' }}>
+								Also delete files from disk
+							</span>
+						</label>
+						<div className="flex gap-3">
+							<button
+								onClick={() => setShowDeleteConfirm(false)}
+								className="flex-1 py-3 rounded-xl text-sm font-medium"
+								style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-primary)' }}
+							>
+								Cancel
+							</button>
+							<button
+								onClick={handleDelete}
+								className="flex-1 py-3 rounded-xl text-sm font-medium"
+								style={{ backgroundColor: 'var(--error)', color: 'var(--accent-contrast)' }}
+							>
+								Delete
+							</button>
+						</div>
+					</div>
+				</>
+			)}
+		</>
+	)
+}
+
+function InfoRow({
+	label,
+	value,
+	accent,
+	small,
+}: {
+	label: string
+	value: string
+	accent?: string | boolean
+	small?: boolean
+}) {
+	return (
+		<div className="flex items-start justify-between gap-4">
+			<span className="text-xs" style={{ color: 'var(--text-muted)' }}>
+				{label}
+			</span>
+			<span
+				className={`text-xs text-right ${small ? 'max-w-[200px] truncate' : ''}`}
+				style={{ color: accent ? (typeof accent === 'string' ? accent : 'var(--accent)') : 'var(--text-primary)' }}
+			>
+				{value}
+			</span>
+		</div>
+	)
+}

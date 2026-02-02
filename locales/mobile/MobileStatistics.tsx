@@ -1,0 +1,146 @@
+import type { ReactNode } from 'react'
+import { ChevronLeft, ArrowDown, ArrowUp, AlertCircle } from 'lucide-react'
+import { formatSize } from '../utils/format'
+import { useStats } from '../hooks/useStats'
+
+interface Props {
+	onBack: () => void
+}
+
+export function MobileStatistics({ onBack }: Props): ReactNode {
+	const { periodData, instances, selectedInstance, setSelectedInstance, isLoading, hasAnyData } = useStats()
+
+	// 汉化周期标签映射
+	const localizedPeriods: Record<string, string> = {
+		'All time': '累计总量',
+		'Last 24h': '最近 24 小时',
+		'Last 7d': '最近 7 天',
+		'Last 30d': '最近 30 天',
+		'all': '累计总量',
+		'24h': '最近 24 小时',
+		'7d': '最近 7 天',
+		'30d': '最近 30 天'
+	}
+
+	return (
+		<div className="min-h-screen" style={{ backgroundColor: 'var(--bg-primary)' }}>
+			<div
+				className="sticky top-0 z-10 flex items-center gap-3 px-4 py-3 border-b"
+				style={{ backgroundColor: 'var(--bg-primary)', borderColor: 'var(--border)' }}
+			>
+				<button onClick={onBack} className="p-2 -ml-2 rounded-xl" style={{ color: 'var(--text-muted)' }}>
+					<ChevronLeft className="w-6 h-6" />
+				</button>
+				<h1 className="text-lg font-semibold flex-1" style={{ color: 'var(--text-primary)' }}>
+					传输统计
+				</h1>
+			</div>
+
+			<div className="p-4 space-y-4">
+				{instances.length > 1 && (
+					<div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4">
+						<button
+							onClick={() => setSelectedInstance('all')}
+							className="px-3 py-1.5 rounded-full text-sm whitespace-nowrap transition-colors"
+							style={{
+								backgroundColor: selectedInstance === 'all' ? 'var(--accent)' : 'var(--bg-secondary)',
+								color: selectedInstance === 'all' ? 'var(--accent-contrast)' : 'var(--text-secondary)',
+							}}
+						>
+							全部
+						</button>
+						{instances.map((inst) => (
+							<button
+								key={inst.id}
+								onClick={() => setSelectedInstance(String(inst.id))}
+								className="px-3 py-1.5 rounded-full text-sm whitespace-nowrap transition-colors"
+								style={{
+									backgroundColor: selectedInstance === String(inst.id) ? 'var(--accent)' : 'var(--bg-secondary)',
+									color: selectedInstance === String(inst.id) ? 'var(--accent-contrast)' : 'var(--text-secondary)',
+								}}
+							>
+								{inst.label}
+							</button>
+						))}
+					</div>
+				)}
+
+				{isLoading ? (
+					<div className="flex items-center justify-center py-12">
+						<div
+							className="w-6 h-6 border-2 rounded-full animate-spin"
+							style={{
+								borderColor: 'color-mix(in srgb, var(--accent) 20%, transparent)',
+								borderTopColor: 'var(--accent)',
+							}}
+						/>
+					</div>
+				) : (
+					<>
+						{!hasAnyData && (
+							<div
+								className="flex items-start gap-3 px-4 py-3 rounded-xl text-sm"
+								style={{
+									backgroundColor: 'color-mix(in srgb, var(--warning) 10%, transparent)',
+									color: 'var(--warning)',
+								}}
+							>
+								<AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+								<div>
+									<div className="font-medium">暂无可用数据</div>
+									<div className="text-xs opacity-80 mt-0.5">统计数据每 5 分钟记录一次</div>
+								</div>
+							</div>
+						)}
+
+						<div className="space-y-2">
+							{periodData!.map((data) => (
+								<div
+									key={data.period}
+									className="px-4 py-3 rounded-xl border"
+									style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border)' }}
+								>
+									<div className="flex items-center justify-between">
+										<div
+											className="text-xs font-medium uppercase tracking-wider"
+											style={{ color: 'var(--text-muted)' }}
+										>
+											{localizedPeriods[data.label] || data.label}
+										</div>
+										<div className="flex items-center gap-4">
+											<div className="flex items-center gap-1.5">
+												<ArrowDown className="w-3.5 h-3.5" style={{ color: 'var(--accent)' }} />
+												<span
+													className="text-sm font-semibold tabular-nums"
+													style={{ color: data.hasData ? 'var(--accent)' : 'var(--text-muted)' }}
+												>
+													{data.hasData ? formatSize(data.downloaded) : '无数据'}
+												</span>
+											</div>
+											<div className="flex items-center gap-1.5">
+												<ArrowUp className="w-3.5 h-3.5" style={{ color: '#a6e3a1' }} />
+												<span
+													className="text-sm font-semibold tabular-nums"
+													style={{ color: data.hasData ? '#a6e3a1' : 'var(--text-muted)' }}
+												>
+													{data.hasData ? formatSize(data.uploaded) : '无数据'}
+												</span>
+											</div>
+										</div>
+									</div>
+								</div>
+							))}
+						</div>
+
+						<ul className="text-xs space-y-1 list-disc list-inside" style={{ color: 'var(--text-muted)' }}>
+							<li>每 5 分钟记录一次统计数据</li>
+							<li>“累计总量”数据直接从 qBittorrent 获取</li>
+							<li>其他周期显示当前与历史快照之间的差值</li>
+							<li>下载统计包含协议流量，不仅是文件数据</li>
+						</ul>
+					</>
+				)}
+			</div>
+		</div>
+	)
+}
