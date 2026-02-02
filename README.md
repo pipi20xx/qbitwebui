@@ -64,7 +64,7 @@ services:
       # - DOWNLOADS_PATH=/downloads
       # 可选：允许自签名 SSL 证书 (连接 HTTPS 实例时可能需要)
       # - ALLOW_SELF_SIGNED_CERTS=true
-      # 可选：内网模式，禁用登录验证
+      # 可选：设置为 true 时，将禁用登录验证（打开网页直接进入）
       # - DISABLE_AUTH=true
     volumes:
       - ./data:/data
