@@ -2,7 +2,7 @@ import { type Instance } from '../api/instances'
 import { formatSize, formatCountdown } from '../utils/format'
 import { Toggle, Select, MultiSelect } from '../components/ui'
 import { useCrossSeed, formatTimestamp, LOG_LEVEL_COLORS } from '../hooks/useCrossSeed'
-import { ChevronLeft, AlertTriangle } from 'lucide-react'
+import { ChevronLeft } from 'lucide-react'
 
 interface Props {
 	instances: Instance[]

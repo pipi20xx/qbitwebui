@@ -1,0 +1,15 @@
+services:
+  qbitwebui:
+    build: .
+    container_name: qbitwebui
+    ports:
+      - "3200:3000"
+    volumes:
+      - ./data:/data
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - DATABASE_PATH=/data/qbitwebui.db
+      - SALT_PATH=/data/.salt
+      - ENCRYPTION_KEY=32_character_random_string_here_please_change_me
+    restart: unless-stopped

@@ -11,18 +11,6 @@ export function Statistics() {
 		...instances.map((i) => ({ value: String(i.id), label: i.label })),
 	]
 
-	// 汉化周期标签映射
-	const localizedPeriods: Record<string, string> = {
-		'All time': '累计总量',
-		'Last 24h': '最近 24 小时',
-		'Last 7d': '最近 7 天',
-		'Last 30d': '最近 30 天',
-		'all': '累计总量',
-		'24h': '最近 24 小时',
-		'7d': '最近 7 天',
-		'30d': '最近 30 天'
-	}
-
 	return (
 		<div className="space-y-6">
 			<div className="flex items-center justify-between">
@@ -69,7 +57,7 @@ export function Statistics() {
 							>
 								<div className="flex items-center justify-between">
 									<div className="text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
-										{localizedPeriods[data.label] || data.label}
+										{data.label}
 									</div>
 									<div className="flex items-center gap-4">
 										<div className="flex items-center gap-1.5">

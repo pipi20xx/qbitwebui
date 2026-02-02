@@ -57,7 +57,7 @@ export function CrossSeedManager({ instances }: Props) {
 					style={{ borderColor: 'var(--border)', borderTopColor: 'var(--accent)' }}
 				/>
 				<span className="text-sm" style={{ color: 'var(--text-muted)' }}>
-					加载中...
+					正在加载...
 				</span>
 			</div>
 		)
@@ -100,10 +100,9 @@ export function CrossSeedManager({ instances }: Props) {
 							style={{
 								backgroundColor: error
 									? 'color-mix(in srgb, var(--error) 15%, transparent)'
-									: 'color-mix(in srgb, #a6e3a1 15%, transparent)'
-								,
+									: 'color-mix(in srgb, #a6e3a1 15%, transparent)',
 								color: error ? 'var(--error)' : '#a6e3a1',
-							}}
+						}}
 						>
 							{error || success}
 						</span>
@@ -115,7 +114,7 @@ export function CrossSeedManager({ instances }: Props) {
 								backgroundColor: 'color-mix(in srgb, var(--warning) 15%, transparent)'
 								,
 								color: 'var(--warning)'
-							}}
+						}}
 						>
 							未关联 Prowlarr
 						</span>
@@ -132,12 +131,12 @@ export function CrossSeedManager({ instances }: Props) {
 						调度器
 					</div>
 					<div className="text-sm font-medium" style={{ color: status?.enabled ? '#a6e3a1' : 'var(--text-muted)' }}>
-						{status?.enabled ? '开启' : '关闭'}
+						{status?.enabled ? '已开启' : '已关闭'}
 					</div>
 				</div>
 				<div>
 					<div className="text-xs uppercase tracking-wider mb-1" style={{ color: 'var(--text-muted)' }}>
-						当前状态
+						状态
 					</div>
 					<div
 						className="text-sm font-medium flex items-center gap-2"
@@ -149,7 +148,7 @@ export function CrossSeedManager({ instances }: Props) {
 								style={{ backgroundColor: stopping ? 'var(--warning)' : 'var(--accent)' }}
 							/>
 						)}
-						{stopping ? '正在停止' : isRunning ? '运行中' : '空闲'}
+						{stopping ? '正在停止' : isRunning ? '正在运行' : '空闲'}
 					</div>
 				</div>
 				<div>
@@ -170,7 +169,7 @@ export function CrossSeedManager({ instances }: Props) {
 				</div>
 				<div>
 					<div className="text-xs uppercase tracking-wider mb-1" style={{ color: 'var(--text-muted)' }}>
-						缓存种子
+						缓存
 					</div>
 					<div className="text-sm" style={{ color: 'var(--text-secondary)' }}>
 						{cacheStats ? `${cacheStats.cache.count} (${formatSize(cacheStats.cache.totalSize)})` : '0'}
@@ -190,7 +189,7 @@ export function CrossSeedManager({ instances }: Props) {
 						<div className="space-y-4">
 							<div className="flex items-center justify-between">
 								<span className="text-sm" style={{ color: 'var(--text-primary)' }}>
-									启用调度器
+									已启用
 								</span>
 								<Toggle checked={config.enabled} onChange={(v) => setConfig({ ...config, enabled: v })} />
 							</div>
@@ -255,7 +254,7 @@ export function CrossSeedManager({ instances }: Props) {
 							{availableIndexers.length > 0 && (
 								<div>
 									<label className="block text-xs mb-1.5" style={{ color: 'var(--text-muted)' }}>
-										索引器 (已选 {config.indexer_ids.length}/{availableIndexers.length})
+										索引器 ({config.indexer_ids.length}/{availableIndexers.length})
 									</label>
 									<MultiSelect
 										options={availableIndexers.map((idx) => ({ value: idx.id, label: idx.name }))}
@@ -311,8 +310,8 @@ export function CrossSeedManager({ instances }: Props) {
 									value={config.match_mode}
 									onChange={(v) => setConfig({ ...config, match_mode: v as 'strict' | 'flexible' })}
 									options={[
-										{ value: 'strict', label: '严格匹配 (名称必须一致)' },
-										{ value: 'flexible', label: '灵活匹配 (仅校验大小，需链接目录)' }
+										{ value: 'strict', label: '严格模式 (名称一致)' },
+										{ value: 'flexible', label: '灵活模式 (大小一致)' },
 									]}
 									minWidth="100%"
 								/>
@@ -320,7 +319,7 @@ export function CrossSeedManager({ instances }: Props) {
 							{config.match_mode === 'flexible' && (
 								<div>
 									<label className="block text-xs mb-1.5" style={{ color: 'var(--text-muted)' }}>
-										链接目录 (用于灵活匹配模式)
+										链接目录 (用于灵活匹配)
 									</label>
 									<input
 										type="text"
@@ -346,34 +345,31 @@ export function CrossSeedManager({ instances }: Props) {
 									排除名单 (每行一个)
 								</label>
 								<textarea
-									value={config.blocklist.join('
-')}
+									value={config.blocklist.join('\n')}
 									onChange={(e) =>
 										setConfig({
 											...config,
 											blocklist: e.target.value
-																.split('
-')
-															.map((s) => s.trim())
-															.filter(Boolean)
+												.split('\n')
+												.map((s) => s.trim())
+												.filter(Boolean)
 										})
-								}
-								placeholder="name:YIFY&#10;nameRegex:.*-RARBG$&#10;category:movies&#10;tag:private&#10;sizeBelow:100MB"
-								rows={4}
-								className="w-full px-3 py-2 rounded-lg border text-sm font-mono"
-								style={{
-									backgroundColor: 'var(--bg-tertiary)'
-									,
-									borderColor: 'var(--border)'
-									,
-									color: 'var(--text-primary)'
-									,
-									resize: 'vertical'
-								}}
-							/>
+									}
+									placeholder="name:YIFY&#10;nameRegex:.*-RARBG$&#10;category:movies&#10;tag:private&#10;sizeBelow:100MB"
+									rows={4}
+									className="w-full px-3 py-2 rounded-lg border text-sm font-mono"
+									style={{
+										backgroundColor: 'var(--bg-tertiary)'
+										,
+										borderColor: 'var(--border)'
+										,
+										color: 'var(--text-primary)'
+										,
+										resize: 'vertical',
+									}}
+								/>
 								<p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
-									格式: 类型:值 (支持 name, nameRegex, folder, folderRegex, category, tag, tracker, infoHash, sizeBelow,
-									sizeAbove)
+									格式: 类型:值 (支持 name, nameRegex, folder, folderRegex, category, tag, tracker, infoHash, sizeBelow, sizeAbove)
 								</p>
 							</div>
 							<div className="flex items-center justify-between">
@@ -387,7 +383,7 @@ export function CrossSeedManager({ instances }: Props) {
 							</div>
 							<div className="flex items-center justify-between">
 								<span className="text-sm" style={{ color: 'var(--text-primary)' }}>
-									模拟运行 (只搜索不添加)
+									模拟运行
 								</span>
 								<Toggle checked={config.dry_run} onChange={(v) => setConfig({ ...config, dry_run: v })} />
 							</div>
@@ -430,9 +426,9 @@ export function CrossSeedManager({ instances }: Props) {
 								onClick={() => handleScan(true)}
 								disabled={isRunning || !config.integration_id}
 								className="px-3 py-2 rounded-lg text-sm border disabled:opacity-50 flex items-center justify-center gap-1.5"
-								style={{ borderColor: 'var(--border)', color: 'var(--text-primary)' }}
+								style={{ borderColor: 'var(--border)', color: 'var(--text-secondary)' }}
 							>
-								强制扫描
+								强制完整扫描
 								<span
 									title="重新扫描所有种子，包括之前已搜索过的。当索引器有新内容或修改设置后使用。"
 									className="inline-flex items-center justify-center w-4 h-4 rounded-full text-xs cursor-help"
@@ -456,7 +452,7 @@ export function CrossSeedManager({ instances }: Props) {
 							<button
 								onClick={handleClearCache}
 								className="px-3 py-2 rounded-lg text-sm border flex items-center justify-center gap-1.5"
-								style={{ borderColor: 'var(--border)', color: 'var(--text-primary)' }}
+								style={{ borderColor: 'var(--border)', color: 'var(--text-secondary)' }}
 							>
 								清空种子缓存
 								<span
@@ -498,7 +494,7 @@ export function CrossSeedManager({ instances }: Props) {
 					>
 						{logs.length === 0 ? (
 							<div className="text-center py-8" style={{ color: 'var(--text-muted)' }}>
-								暂无日志
+								暂无运行日志
 							</div>
 						) : (
 							logs.map((log, i) => {
