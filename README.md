@@ -1,105 +1,102 @@
 <div align="center">
  <img width="200" height="200" alt="logo" src="https://github.com/user-attachments/assets/431cf92d-d8e6-4be7-a5b6-642ed6ab9898" />
 
-### A modern web interface for managing multiple qBittorrent instances
+# qbitwebui-cn (全界面汉化版)
 
-Built with [React](https://react.dev/), [Hono](https://hono.dev/), and [Bun](https://bun.sh/)
+### 适配多 qBittorrent 实例的现代 Web 管理界面
 
-[![GitHub stars](https://img.shields.io/github/stars/Maciejonos/qbitwebui?style=for-the-badge&labelColor=101418&color=9ccbfb)](https://github.com/Maciejonos/qbitwebui/stargazers)
+本项目 fork 自 [Maciejonos/qbitwebui](https://github.com/Maciejonos/qbitwebui)，并在其基础上进行了深度汉化。
+
+[![GitHub stars](https://img.shields.io/github/stars/pipi20xx/qbitwebui-cn?style=for-the-badge&labelColor=101418&color=9ccbfb)](https://github.com/pipi20xx/qbitwebui-cn/stargazers)
 [![GitHub License](https://img.shields.io/github/license/Maciejonos/qbitwebui?style=for-the-badge&labelColor=101418&color=abedd5)](https://github.com/Maciejonos/qbitwebui/blob/master/LICENSE)
-[![GitHub release](https://img.shields.io/github/v/release/Maciejonos/qbitwebui?style=for-the-badge&labelColor=101418&color=b9c8da)](https://github.com/Maciejonos/qbitwebui/releases)
-[![Docker Build](https://img.shields.io/github/actions/workflow/status/Maciejonos/qbitwebui/docker.yml?style=for-the-badge&labelColor=101418&color=4EB329&label=build)](https://github.com/Maciejonos/qbitwebui/actions)
+[![Upstream Sync](https://img.shields.io/badge/Upstream-v2.42.1-blue?style=for-the-badge&labelColor=101418)](https://github.com/Maciejonos/qbitwebui)
 
-**[Documentation](https://maciejonos.github.io/qbitwebui/)** · **[Docker Examples](https://maciejonos.github.io/qbitwebui/guide/docker)** · **[All Features](https://maciejonos.github.io/qbitwebui/guide/features)**
+**[官方文档](https://maciejonos.github.io/qbitwebui/)** · **[功能列表](https://maciejonos.github.io/qbitwebui/guide/features)**
 
 </div>
 
-<div align="center">
-<img width="800" alt="main" src="https://github.com/user-attachments/assets/64ae19ea-9029-442c-97dd-958af04e21d1" />
-</div>
+---
 
-<details>
-<summary><h3>Mobile UI</h3></summary>
-<div align="center">
-<table>
-  <tr>
-   <td> <img width="295" alt="mobile" src="https://github.com/user-attachments/assets/ea14587c-1b12-46c7-afdc-def83b5e3e7c" /></td>
-   <td> <img width="295" alt="mobile-detailed" src="https://github.com/user-attachments/assets/97c1ddf1-8df0-4acd-a6a1-5690badd7aa7" /></td>
-  </tr>
-</table>
-</div>
-</details>
+## 🌏 汉化说明
 
-## Features
+本仓库致力于提供 **qbitwebui** 的完整中文本地化体验。与官方版本相比，主要改进如下：
 
-See [features section](https://maciejonos.github.io/qbitwebui/guide/features) for more details.
+- **全界面汉化**：包括桌面端和移动端的所有菜单、设置、工具栏及弹出对话框。
+- **深度适配**：不仅汉化了静态文字，还对动态加载的统计周期（如“15 分钟”、“累计总量”）进行了 Hook 层面的中文适配。
+- **外挂式架构**：采用非侵入式汉化方案，通过 `locales/` 目录进行覆盖，方便同步上游更新而不破坏汉化成果。
 
-- **Multi-instance** - Manage multiple qBittorrent instances from one dashboard
-- **Cross seed** - Automatic cross seed directly in qbitwebui. (experimental)
-- **Instance statistics** - Overview of all instances with status, speeds, torrent counts
-- **Prowlarr integration** - Search indexers and send torrents directly to qBittorrent
-- **Real-time monitoring** - Auto-refresh torrent status, speeds, progress
-- **Customizable columns** - Show/hide columns, drag and drop reorder
-- **Torrent management** - Add via magnet/file, set priorities, manage trackers/peers
-- **Organization** - Filter by status, category, tag, or tracker, custom views
-- **Bulk actions** - Multi-select with context menu, keyboard navigation
-- **Themes** - Multiple color themes included
-- **File browser** - Browse and download files from your downloads directory
-- **RSS management** - Define rules, add RSS feeds, manage folders
-- **Network agent** - Speedtest, IP check, DNS diagnostics - [setup instructions](https://maciejonos.github.io/qbitwebui/guide/network-agent)
+### 📌 当前同步信息
+- **上游版本**：`v2.42.1`
+- **同步日期**：2026-02-02
+- **上游最后提交**：`4c97082` (2026-01-30)
 
-## Docker
+---
 
-See [Docker section](https://maciejonos.github.io/qbitwebui/guide/docker) for all setup options.
+## ✨ 核心功能
+
+- **多实例管理**：在一个仪表盘中同时管理多个 qBittorrent 实例。
+- **辅种管理 (Cross Seed)**：直接在 UI 中配置和监控自动辅种功能（实验性）。
+- **传输统计**：多维度的上传/下载流量统计，支持按实例和周期查看。
+- **Prowlarr 集成**：集成索引器搜索，一键推送到指定的 qBittorrent 实例。
+- **实时监控**：自动刷新种子状态、进度及速度，无需手动刷新页面。
+- **自定义布局**：支持列显示/隐藏及拖拽排序。
+- **文件浏览器**：支持远程浏览、重命名、移动及下载种子对应的文件。
+- **网络工具箱**：内置 Speedtest、IP 检测、DNS 诊断等实用工具。
+
+---
+
+## 🐳 Docker 部署 (推荐)
+
+可以直接使用预编译的汉化版镜像进行部署：
 
 ```yaml
 services:
   qbitwebui:
-    image: ghcr.io/maciejonos/qbitwebui:latest
+    image: pipi20xx/qbitwebui-cn:latest
+    container_name: qbitwebui-cn
     ports:
-      - "3000:3000"
+      - "3200:3000"
     environment:
-      # Generate your own: openssl rand -hex 32
-      - ENCRYPTION_KEY=your-secret-key-here
-      # Uncomment to disable login (single-user mode)
-      # - DISABLE_AUTH=true
-      # Uncomment to disable registration (creates default admin account)
-      # - DISABLE_REGISTRATION=true
-      # Uncomment to allow HTTPS with self-signed certificates
-      # - ALLOW_SELF_SIGNED_CERTS=true
-      # Uncomment to enable file browser
+      - TZ=Asia/Shanghai
+      # 必填：用于加密存储的实例凭据 (openssl rand -hex 32)
+      - ENCRYPTION_KEY=your-32-character-secret-key-here
+      # 可选：如果你想使用文件浏览器，请取消下面注释并挂载目录
       # - DOWNLOADS_PATH=/downloads
+      # 可选：允许自签名 SSL 证书 (连接 HTTPS 实例时可能需要)
+      # - ALLOW_SELF_SIGNED_CERTS=true
+      # 可选：内网模式，禁用登录验证
+      # - DISABLE_AUTH=true
     volumes:
       - ./data:/data
-      # Uncomment to enable file browser (read-only: browse & download only)
-      # - /path/to/your/downloads:/downloads:ro
-      # Or mount read-write to enable delete/move/copy/rename
+      # 可选：挂载下载目录 (与 DOWNLOADS_PATH 配合使用)
       # - /path/to/your/downloads:/downloads
     restart: unless-stopped
 ```
 
-## Development
+如果您想基于源码自行构建：
+```bash
+docker compose up -d --build
+```
+
+---
+
+## 🛠 开发与贡献
+
+如果您发现了翻译错误或有更好的建议，欢迎提交 Pull Request。
 
 ```bash
+# 生成加密密钥
 export ENCRYPTION_KEY=$(openssl rand -hex 32)
 
 bun install
 bun run dev
 ```
 
-## Tech Stack
+## ⚖️ 许可
 
-React 19, TypeScript, Tailwind CSS v4, Vite, TanStack Query, Hono, SQLite, Bun
+基于 MIT 许可证开源。
 
-## Star History
+## 致谢
 
-[![Star History Chart](https://api.star-history.com/svg?repos=Maciejonos/qbitwebui&type=date&legend=top-left)](https://www.star-history.com/#Maciejonos/qbitwebui&type=date&legend=top-left)
-## Credits
-
-Big thanks to [cross-seed](https://github.com/cross-seed/cross-seed). A huge chunk of Qbitwebui cross seed implementation is basically taken from cross-seed directly, or ported and slightly adjusted. Qbitwebui is of course in no way associated or endorsed by cross-seed.
-
-I highly recommend to check cross-seed out, if you want something very reliable. 
-
-## License
-
-MIT
+感谢 [Maciejonos/qbitwebui](https://github.com/Maciejonos/qbitwebui) 提供的优秀项目基础。
+感谢 [cross-seed](https://github.com/cross-seed/cross-seed) 为辅种逻辑提供的灵感与参考。
