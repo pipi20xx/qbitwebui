@@ -9,7 +9,7 @@
 
 [![GitHub stars](https://img.shields.io/github/stars/pipi20xx/qbitwebui-cn?style=for-the-badge&labelColor=101418&color=9ccbfb)](https://github.com/pipi20xx/qbitwebui-cn/stargazers)
 [![GitHub License](https://img.shields.io/github/license/Maciejonos/qbitwebui?style=for-the-badge&labelColor=101418&color=abedd5)](https://github.com/Maciejonos/qbitwebui/blob/master/LICENSE)
-[![Upstream Sync](https://img.shields.io/badge/Upstream-v2.42.1-blue?style=for-the-badge&labelColor=101418)](https://github.com/Maciejonos/qbitwebui)
+[![Upstream Sync](https://img.shields.io/badge/Upstream-v2.42.3-blue?style=for-the-badge&labelColor=101418)](https://github.com/Maciejonos/qbitwebui)
 
 **[官方文档](https://maciejonos.github.io/qbitwebui/)** · **[功能列表](https://maciejonos.github.io/qbitwebui/guide/features)**
 
@@ -26,9 +26,9 @@
 - **外挂式架构**：采用非侵入式汉化方案，通过 `locales/` 目录进行覆盖，方便同步上游更新而不破坏汉化成果。
 
 ### 📌 当前同步信息
-- **上游版本**：`v2.42.1`
-- **同步日期**：2026-02-02
-- **上游最后提交**：`4c97082` (2026-01-30)
+- **上游版本**：`v2.42.3`
+- **同步日期**：2026-02-20
+- **上游最后提交**：`f371eb7` (2026-02-15)
 
 ---
 

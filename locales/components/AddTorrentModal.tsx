@@ -81,8 +81,7 @@ export function AddTorrentModal({ open, onClose }: Props) {
 			onDragOver={(e) => e.preventDefault()}
 			onDrop={handleDrop}
 		>
-			<div className="relative w-full max-md mx-4 opacity-0 animate-in">
-				<div
+								<div className="relative w-full max-w-md mx-4 opacity-0 animate-in">				<div
 					className="absolute -inset-px rounded-2xl"
 					style={{
 						background: 'linear-gradient(to bottom, color-mix(in srgb, var(--accent) 20%, transparent), transparent)',
